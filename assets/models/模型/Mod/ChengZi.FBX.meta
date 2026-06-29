@@ -1,0 +1,147 @@
+{
+  "ver": "2.3.14",
+  "importer": "fbx",
+  "imported": true,
+  "uuid": "68c01108-9e6e-45bd-a005-9cfc4b7cd131",
+  "files": [],
+  "subMetas": {
+    "d95f1": {
+      "importer": "gltf-mesh",
+      "uuid": "68c01108-9e6e-45bd-a005-9cfc4b7cd131@d95f1",
+      "displayName": "",
+      "id": "d95f1",
+      "name": "ChengZi.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 790
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "1e5ef": {
+      "importer": "gltf-embeded-image",
+      "uuid": "68c01108-9e6e-45bd-a005-9cfc4b7cd131@1e5ef",
+      "displayName": "",
+      "id": "1e5ef",
+      "name": "贴图 #10.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": false,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".jpg",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "c774a": {
+      "importer": "texture",
+      "uuid": "68c01108-9e6e-45bd-a005-9cfc4b7cd131@c774a",
+      "displayName": "",
+      "id": "c774a",
+      "name": "贴图 #10.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "68c01108-9e6e-45bd-a005-9cfc4b7cd131@1e5ef"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "03263": {
+      "importer": "gltf-material",
+      "uuid": "68c01108-9e6e-45bd-a005-9cfc4b7cd131@03263",
+      "displayName": "",
+      "id": "03263",
+      "name": "CZ.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "90c3c": {
+      "importer": "gltf-scene",
+      "uuid": "68c01108-9e6e-45bd-a005-9cfc4b7cd131@90c3c",
+      "displayName": "",
+      "id": "90c3c",
+      "name": "ChengZi.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "贴图 #10",
+        "uri": "68c01108-9e6e-45bd-a005-9cfc4b7cd131@1e5ef"
+      }
+    ],
+    "fbx": {
+      "smartMaterialEnabled": true,
+      "matchMeshNames": false
+    },
+    "assetFinder": {
+      "meshes": [
+        "68c01108-9e6e-45bd-a005-9cfc4b7cd131@d95f1"
+      ],
+      "skeletons": [],
+      "textures": [
+        "68c01108-9e6e-45bd-a005-9cfc4b7cd131@c774a"
+      ],
+      "materials": [
+        "68c01108-9e6e-45bd-a005-9cfc4b7cd131@03263"
+      ],
+      "scenes": [
+        "68c01108-9e6e-45bd-a005-9cfc4b7cd131@90c3c"
+      ]
+    },
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    }
+  }
+}

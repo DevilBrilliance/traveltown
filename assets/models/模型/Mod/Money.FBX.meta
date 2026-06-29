@@ -1,0 +1,147 @@
+{
+  "ver": "2.3.14",
+  "importer": "fbx",
+  "imported": true,
+  "uuid": "633355e9-14ff-48a0-9bd2-fa72f6376b95",
+  "files": [],
+  "subMetas": {
+    "46540": {
+      "importer": "gltf-mesh",
+      "uuid": "633355e9-14ff-48a0-9bd2-fa72f6376b95@46540",
+      "displayName": "",
+      "id": "46540",
+      "name": "Box001.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 44
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "94660": {
+      "importer": "gltf-material",
+      "uuid": "633355e9-14ff-48a0-9bd2-fa72f6376b95@94660",
+      "displayName": "",
+      "id": "94660",
+      "name": "Money.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "df7df": {
+      "importer": "gltf-embeded-image",
+      "uuid": "633355e9-14ff-48a0-9bd2-fa72f6376b95@df7df",
+      "displayName": "",
+      "id": "df7df",
+      "name": "贴图 #1.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": true,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".json",
+        ".png"
+      ],
+      "subMetas": {}
+    },
+    "a96a6": {
+      "importer": "texture",
+      "uuid": "633355e9-14ff-48a0-9bd2-fa72f6376b95@a96a6",
+      "displayName": "",
+      "id": "a96a6",
+      "name": "贴图 #1.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "633355e9-14ff-48a0-9bd2-fa72f6376b95@df7df"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "10ded": {
+      "importer": "gltf-scene",
+      "uuid": "633355e9-14ff-48a0-9bd2-fa72f6376b95@10ded",
+      "displayName": "",
+      "id": "10ded",
+      "name": "Money.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "贴图 #1",
+        "uri": "633355e9-14ff-48a0-9bd2-fa72f6376b95@df7df"
+      }
+    ],
+    "fbx": {
+      "smartMaterialEnabled": true,
+      "matchMeshNames": false
+    },
+    "assetFinder": {
+      "meshes": [
+        "633355e9-14ff-48a0-9bd2-fa72f6376b95@46540"
+      ],
+      "skeletons": [],
+      "textures": [
+        "633355e9-14ff-48a0-9bd2-fa72f6376b95@a96a6"
+      ],
+      "materials": [
+        "633355e9-14ff-48a0-9bd2-fa72f6376b95@94660"
+      ],
+      "scenes": [
+        "633355e9-14ff-48a0-9bd2-fa72f6376b95@10ded"
+      ]
+    },
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    }
+  }
+}

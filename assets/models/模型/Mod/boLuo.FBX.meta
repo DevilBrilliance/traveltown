@@ -1,0 +1,193 @@
+{
+  "ver": "2.3.14",
+  "importer": "fbx",
+  "imported": true,
+  "uuid": "bc986ab0-3a9b-4ab5-a832-b29ce9de9712",
+  "files": [],
+  "subMetas": {
+    "778d2": {
+      "importer": "gltf-mesh",
+      "uuid": "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@778d2",
+      "displayName": "",
+      "id": "778d2",
+      "name": "Gan.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 1089
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "b995d": {
+      "importer": "gltf-mesh",
+      "uuid": "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@b995d",
+      "displayName": "",
+      "id": "b995d",
+      "name": "Boluo.mesh",
+      "userData": {
+        "gltfIndex": 1,
+        "triangleCount": 648
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "19e97": {
+      "importer": "gltf-material",
+      "uuid": "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@19e97",
+      "displayName": "",
+      "id": "19e97",
+      "name": "菠萝_boluo.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "e9806": {
+      "importer": "gltf-scene",
+      "uuid": "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@e9806",
+      "displayName": "",
+      "id": "e9806",
+      "name": "boLuo.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "fbx": {
+      "smartMaterialEnabled": true,
+      "matchMeshNames": false
+    },
+    "assetFinder": {
+      "meshes": [
+        "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@778d2",
+        "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@b995d"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@19e97"
+      ],
+      "scenes": [
+        "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@e9806"
+      ]
+    },
+    "materials": {
+      "bc986ab0-3a9b-4ab5-a832-b29ce9de9712@19e97": {
+        "__type__": "cc.Material",
+        "_name": "",
+        "_objFlags": 0,
+        "_native": "",
+        "_effectAsset": {
+          "__uuid__": "f648964e-8d32-41fc-9ac9-7a1e714dd17b",
+          "__expectedType__": "cc.EffectAsset"
+        },
+        "_techIdx": 0,
+        "_defines": [
+          {
+            "DCC_APP_NAME": 1,
+            "USE_ALBEDO_MAP": true
+          },
+          {},
+          {}
+        ],
+        "_states": [
+          {
+            "rasterizerState": {},
+            "depthStencilState": {},
+            "blendState": {
+              "targets": [
+                {}
+              ]
+            }
+          },
+          {
+            "rasterizerState": {},
+            "depthStencilState": {},
+            "blendState": {
+              "targets": [
+                {}
+              ]
+            }
+          },
+          {
+            "rasterizerState": {},
+            "depthStencilState": {},
+            "blendState": {
+              "targets": [
+                {}
+              ]
+            }
+          }
+        ],
+        "_props": [
+          {
+            "mainTexture": {
+              "__uuid__": "65bcdc0e-ce58-46d5-927b-e7a9ad37053f@6c48a",
+              "__expectedType__": "cc.Texture2D"
+            },
+            "mainColor": {
+              "__type__": "cc.Color",
+              "r": 202,
+              "g": 202,
+              "b": 202,
+              "a": 255
+            },
+            "emissiveScale": 0,
+            "shininessExponent": 2,
+            "specularColor": {
+              "__type__": "cc.Color",
+              "r": 243,
+              "g": 243,
+              "b": 243,
+              "a": 255
+            },
+            "specularFactor": 0
+          },
+          {},
+          {}
+        ]
+      }
+    },
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    }
+  }
+}

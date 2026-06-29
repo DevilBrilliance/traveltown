@@ -1,0 +1,185 @@
+{
+  "ver": "2.3.14",
+  "importer": "fbx",
+  "imported": true,
+  "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec",
+  "files": [],
+  "subMetas": {
+    "42212": {
+      "importer": "gltf-material",
+      "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec@42212",
+      "displayName": "",
+      "id": "42212",
+      "name": "YeShu.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "a3bd7": {
+      "importer": "gltf-mesh",
+      "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec@a3bd7",
+      "displayName": "",
+      "id": "a3bd7",
+      "name": "YeShu_BK01.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 120
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "a29b3": {
+      "importer": "gltf-mesh",
+      "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec@a29b3",
+      "displayName": "",
+      "id": "a29b3",
+      "name": "YeShu_BK03.mesh",
+      "userData": {
+        "gltfIndex": 1,
+        "triangleCount": 48
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "ab4c2": {
+      "importer": "gltf-mesh",
+      "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec@ab4c2",
+      "displayName": "",
+      "id": "ab4c2",
+      "name": "YeShu_BK02.mesh",
+      "userData": {
+        "gltfIndex": 2,
+        "triangleCount": 30
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "98e57": {
+      "importer": "gltf-embeded-image",
+      "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec@98e57",
+      "displayName": "",
+      "id": "98e57",
+      "name": "贴图 #9.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": true,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".json",
+        ".png"
+      ],
+      "subMetas": {}
+    },
+    "5ad75": {
+      "importer": "texture",
+      "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec@5ad75",
+      "displayName": "",
+      "id": "5ad75",
+      "name": "贴图 #9.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "ace7a10f-be89-4353-8b19-a7ae11d6caec@98e57"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "1d68d": {
+      "importer": "gltf-scene",
+      "uuid": "ace7a10f-be89-4353-8b19-a7ae11d6caec@1d68d",
+      "displayName": "",
+      "id": "1d68d",
+      "name": "YeShu_BK.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "贴图 #9",
+        "uri": "ace7a10f-be89-4353-8b19-a7ae11d6caec@98e57"
+      }
+    ],
+    "fbx": {
+      "smartMaterialEnabled": true,
+      "matchMeshNames": false
+    },
+    "assetFinder": {
+      "meshes": [
+        "ace7a10f-be89-4353-8b19-a7ae11d6caec@a3bd7",
+        "ace7a10f-be89-4353-8b19-a7ae11d6caec@a29b3",
+        "ace7a10f-be89-4353-8b19-a7ae11d6caec@ab4c2"
+      ],
+      "skeletons": [],
+      "textures": [
+        "ace7a10f-be89-4353-8b19-a7ae11d6caec@5ad75"
+      ],
+      "materials": [
+        "ace7a10f-be89-4353-8b19-a7ae11d6caec@42212"
+      ],
+      "scenes": [
+        "ace7a10f-be89-4353-8b19-a7ae11d6caec@1d68d"
+      ]
+    },
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    }
+  }
+}

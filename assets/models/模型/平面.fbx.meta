@@ -1,0 +1,79 @@
+{
+  "ver": "2.3.14",
+  "importer": "fbx",
+  "imported": true,
+  "uuid": "7eb81888-d88a-4aea-9cd2-326e4d035e37",
+  "files": [],
+  "subMetas": {
+    "9a84c": {
+      "importer": "gltf-mesh",
+      "uuid": "7eb81888-d88a-4aea-9cd2-326e4d035e37@9a84c",
+      "displayName": "",
+      "id": "9a84c",
+      "name": "平面.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 2
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "3c3f1": {
+      "importer": "gltf-scene",
+      "uuid": "7eb81888-d88a-4aea-9cd2-326e4d035e37@3c3f1",
+      "displayName": "",
+      "id": "3c3f1",
+      "name": "平面.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "fbx": {
+      "smartMaterialEnabled": true,
+      "matchMeshNames": false
+    },
+    "assetFinder": {
+      "meshes": [
+        "7eb81888-d88a-4aea-9cd2-326e4d035e37@9a84c"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [],
+      "scenes": [
+        "7eb81888-d88a-4aea-9cd2-326e4d035e37@3c3f1"
+      ]
+    },
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    }
+  }
+}

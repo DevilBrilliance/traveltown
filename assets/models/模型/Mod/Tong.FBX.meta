@@ -1,0 +1,147 @@
+{
+  "ver": "2.3.14",
+  "importer": "fbx",
+  "imported": true,
+  "uuid": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b",
+  "files": [],
+  "subMetas": {
+    "467bb": {
+      "importer": "gltf-mesh",
+      "uuid": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@467bb",
+      "displayName": "",
+      "id": "467bb",
+      "name": "Tong.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 568
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "d412c": {
+      "importer": "gltf-embeded-image",
+      "uuid": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@d412c",
+      "displayName": "",
+      "id": "d412c",
+      "name": "贴图 #13.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": true,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".json",
+        ".png"
+      ],
+      "subMetas": {}
+    },
+    "baf1c": {
+      "importer": "texture",
+      "uuid": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@baf1c",
+      "displayName": "",
+      "id": "baf1c",
+      "name": "贴图 #13.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@d412c"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "64fe1": {
+      "importer": "gltf-material",
+      "uuid": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@64fe1",
+      "displayName": "",
+      "id": "64fe1",
+      "name": "Tong.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "2e4be": {
+      "importer": "gltf-scene",
+      "uuid": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@2e4be",
+      "displayName": "",
+      "id": "2e4be",
+      "name": "Tong.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "贴图 #13",
+        "uri": "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@d412c"
+      }
+    ],
+    "fbx": {
+      "smartMaterialEnabled": true,
+      "matchMeshNames": false
+    },
+    "assetFinder": {
+      "meshes": [
+        "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@467bb"
+      ],
+      "skeletons": [],
+      "textures": [
+        "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@baf1c"
+      ],
+      "materials": [
+        "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@64fe1"
+      ],
+      "scenes": [
+        "5b8c582c-44af-4445-a4e2-4ec2bc6dc78b@2e4be"
+      ]
+    },
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    }
+  }
+}
