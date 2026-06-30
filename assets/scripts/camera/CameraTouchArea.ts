@@ -55,6 +55,7 @@ export class CameraTouchArea extends Component {
     private readonly _tmpVec2 = new Vec2();
     private readonly _mouseStart = new Vec2();
     private readonly _mouseLast = new Vec2();
+    /** 本节点收到 MOUSE_DOWN 后为 true，直到 MOUSE_UP 或检测到未按键移动 */
     private _mouseDown = false;
     private _mouseDragReady = false;
     private _pinchLastDistance = 0;
@@ -74,6 +75,10 @@ export class CameraTouchArea extends Component {
         this.node.on(Node.EventType.MOUSE_WHEEL, this._onMouseWheel, this);
 
         input.on(Input.EventType.MOUSE_UP, this._onGlobalMouseUp, this);
+        input.on(Input.EventType.MOUSE_MOVE, this._onGlobalMouseMove, this);
+
+        input.on(Input.EventType.TOUCH_END, this._onGlobalTouchEnd, this);
+        input.on(Input.EventType.TOUCH_CANCEL, this._onGlobalTouchEnd, this);
     }
 
     start() {
@@ -90,6 +95,16 @@ export class CameraTouchArea extends Component {
         this.node.off(Node.EventType.MOUSE_UP, this._onMouseUp, this);
         this.node.off(Node.EventType.MOUSE_WHEEL, this._onMouseWheel, this);
         input.off(Input.EventType.MOUSE_UP, this._onGlobalMouseUp, this);
+        input.off(Input.EventType.MOUSE_MOVE, this._onGlobalMouseMove, this);
+
+        input.off(Input.EventType.TOUCH_END, this._onGlobalTouchEnd, this);
+        input.off(Input.EventType.TOUCH_CANCEL, this._onGlobalTouchEnd, this);
+    }
+
+    onDisable() {
+        this._resetMouseDrag();
+        this._touches.clear();
+        this._pinchLastDistance = 0;
     }
 
     public bindOrbitController(controller: CameraOrbitController | null): void {
@@ -140,9 +155,31 @@ export class CameraTouchArea extends Component {
     }
 
     private _onMouseMove(event: EventMouse): void {
+        if (!this._useMouse) {
+            return;
+        }
+        this._processMouseDrag(event);
+    }
+
+    /** 拖拽越过节点边界时，节点 MOUSE_MOVE 会停发，需靠全局 MOVE 继续跟手 */
+    private _onGlobalMouseMove(event: EventMouse): void {
         if (!this._useMouse || !this._mouseDown) {
             return;
         }
+        this._processMouseDrag(event);
+    }
+
+    private _processMouseDrag(event: EventMouse): void {
+        const button = event.getButton();
+        // Cocos 3.8：未按键悬停移动时 getButton() === BUTTON_MISSING
+        if (button === EventMouse.BUTTON_MISSING) {
+            this._resetMouseDrag();
+            return;
+        }
+        if (!this._mouseDown || button !== EventMouse.BUTTON_LEFT) {
+            return;
+        }
+
         const pos = event.getUILocation(this._tmpVec2);
         if (!this._mouseDragReady) {
             if (Vec2.distance(this._mouseStart, pos) < this.rotateDeadZone) {
@@ -156,16 +193,12 @@ export class CameraTouchArea extends Component {
         this._mouseLast.set(pos);
     }
 
-    private _onMouseUp(event: EventMouse): void {
-        if (event.getButton() === EventMouse.BUTTON_LEFT) {
-            this._resetMouseDrag();
-        }
+    private _onMouseUp(_event: EventMouse): void {
+        this._resetMouseDrag();
     }
 
-    private _onGlobalMouseUp(event: EventMouse): void {
-        if (event.getButton() === EventMouse.BUTTON_LEFT) {
-            this._resetMouseDrag();
-        }
+    private _onGlobalMouseUp(_event: EventMouse): void {
+        this._resetMouseDrag();
     }
 
     private _resetMouseDrag(): void {
@@ -237,8 +270,19 @@ export class CameraTouchArea extends Component {
         if (this._useMouse) {
             return;
         }
+        this._removeTouch(event.getID());
+    }
 
-        this._touches.delete(event.getID());
+    /** 手指在其它 UI 上抬起时，节点 TOUCH_END 可能收不到 */
+    private _onGlobalTouchEnd(event: EventTouch): void {
+        if (this._useMouse) {
+            return;
+        }
+        this._removeTouch(event.getID());
+    }
+
+    private _removeTouch(id: number): void {
+        this._touches.delete(id);
         if (this._touches.size <= 1) {
             this._pinchLastDistance = 0;
         } else if (this._touches.size >= 2) {
