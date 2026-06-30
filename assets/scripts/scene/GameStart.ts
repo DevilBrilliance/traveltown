@@ -9,7 +9,8 @@ import {
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAppearanceType } from '../character/CharacterAppearanceType';
 import { PlayerMovementController } from '../character/PlayerMovementController';
-import { CameraFollowController } from '../camera/CameraFollowController';
+import { CameraOrbitController } from '../camera/CameraOrbitController';
+import { bindCameraTouchUI } from '../camera/CameraTouchUISetup';
 
 const { ccclass, property } = _decorator;
 
@@ -50,7 +51,8 @@ export class GameStart extends Component {
                 characterNode.name = 'Protagonist';
                 characterNode.setWorldPosition(this.spawnPosition);
                 characterNode.addComponent(PlayerMovementController);
-                CameraFollowController.bindMainCamera(characterNode, true);
+                const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
+                bindCameraTouchUI(orbit);
                 this._protagonist = characterNode;
             },
             this.protagonistPrefab,
