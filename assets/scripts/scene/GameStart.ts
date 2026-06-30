@@ -9,6 +9,7 @@ import {
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAppearanceType } from '../character/CharacterAppearanceType';
 import { PlayerMovementController } from '../character/PlayerMovementController';
+import { CameraFollowController } from '../camera/CameraFollowController';
 
 const { ccclass, property } = _decorator;
 
@@ -49,6 +50,7 @@ export class GameStart extends Component {
                 characterNode.name = 'Protagonist';
                 characterNode.setWorldPosition(this.spawnPosition);
                 characterNode.addComponent(PlayerMovementController);
+                CameraFollowController.bindMainCamera(characterNode, true);
                 this._protagonist = characterNode;
             },
             this.protagonistPrefab,
