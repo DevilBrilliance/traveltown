@@ -38,6 +38,7 @@ export class OrderManager extends Component {
     private readonly _orders = new Map<string, OrderInfo>();
     private readonly _subjectToOrderId = new Map<string, string>();
     private readonly _fulfilledListeners = new Set<OrderListener>();
+    private readonly _ordersChangedListeners = new Set<() => void>();
     private readonly _registeredSubjects = new Map<string, OrderSubject>();
 
     onLoad() {
@@ -61,6 +62,14 @@ export class OrderManager extends Component {
 
     public offOrderFulfilled(listener: OrderListener): void {
         this._fulfilledListeners.delete(listener);
+    }
+
+    public onOrdersChanged(listener: () => void): void {
+        this._ordersChangedListeners.add(listener);
+    }
+
+    public offOrdersChanged(listener: () => void): void {
+        this._ordersChangedListeners.delete(listener);
     }
 
     /** 注册场景主体（OrderSubject 组件调用） */
@@ -90,6 +99,7 @@ export class OrderManager extends Component {
             this._orders.delete(orderId);
             this._subjectToOrderId.delete(subjectId);
         }
+        this._notifyOrdersChanged();
     }
 
     /**
@@ -168,6 +178,7 @@ export class OrderManager extends Component {
             order.status = OrderStatus.Pending;
         }
 
+        this._notifyOrdersChanged();
         return true;
     }
 
@@ -222,6 +233,13 @@ export class OrderManager extends Component {
 
         this._orders.set(order.id, order);
         this._subjectToOrderId.set(options.subjectId, order.id);
+        this._notifyOrdersChanged();
         return order;
+    }
+
+    private _notifyOrdersChanged(): void {
+        for (const listener of this._ordersChangedListeners) {
+            listener();
+        }
     }
 }

@@ -17,6 +17,9 @@ import { CurrencyDisplay } from '../currency/CurrencyDisplay';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { OrderManager } from '../order/OrderManager';
 import { RewardManager } from '../reward/RewardManager';
+import { SpeechBubbleManager } from '../ui/bubble/SpeechBubbleManager';
+import { OrderBubbleBinder } from '../ui/bubble/OrderBubbleBinder';
+import { SpeechBubbleTestInput } from '../ui/bubble/SpeechBubbleTestInput';
 
 const { ccclass, property } = _decorator;
 
@@ -42,6 +45,7 @@ export class GameStart extends Component {
         this._ensureCurrencyDisplay();
         this._ensureOrderManager();
         this._ensureRewardManager();
+        this._ensureSpeechBubbleSystem();
         this._ensurePlayAreaBoundary();
         this._ensureDrawCallOptimizer();
         if (this.autoStart) {
@@ -115,5 +119,17 @@ export class GameStart extends Component {
 
     private _ensureRewardManager(): RewardManager {
         return RewardManager.ensure();
+    }
+
+    private _ensureSpeechBubbleSystem(): SpeechBubbleManager {
+        const bubbles = SpeechBubbleManager.ensure();
+        const startNode = director.getScene()?.getChildByName('start') ?? this.node;
+        if (!startNode.getComponent(OrderBubbleBinder)) {
+            startNode.addComponent(OrderBubbleBinder);
+        }
+        if (!startNode.getComponent(SpeechBubbleTestInput)) {
+            startNode.addComponent(SpeechBubbleTestInput);
+        }
+        return bubbles;
     }
 }
