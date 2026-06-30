@@ -12,6 +12,7 @@ import { PlayerMovementController } from '../character/PlayerMovementController'
 import { CameraOrbitController } from '../camera/CameraOrbitController';
 import { bindCameraTouchUI } from '../camera/CameraTouchUISetup';
 import { PlayAreaBoundary } from './PlayAreaBoundary';
+import { PlayableDrawCallOptimizer } from './PlayableDrawCallOptimizer';
 
 const { ccclass, property } = _decorator;
 
@@ -34,6 +35,7 @@ export class GameStart extends Component {
 
     onLoad() {
         this._ensurePlayAreaBoundary();
+        this._ensureDrawCallOptimizer();
         if (this.autoStart) {
             this.startGame();
         }
@@ -76,5 +78,14 @@ export class GameStart extends Component {
             return null;
         }
         return island.getComponent(PlayAreaBoundary) ?? island.addComponent(PlayAreaBoundary);
+    }
+
+    private _ensureDrawCallOptimizer(): PlayableDrawCallOptimizer | null {
+        const island = director.getScene()?.getChildByName('Island');
+        if (!island) {
+            return null;
+        }
+        return island.getComponent(PlayableDrawCallOptimizer)
+            ?? island.addComponent(PlayableDrawCallOptimizer);
     }
 }

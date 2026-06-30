@@ -59,6 +59,9 @@ export class EasyTouchJoystick extends Component {
     @property({ tooltip: '键盘输入时同步移动摇杆头（未触摸时）' })
     syncStickWithKeyboard = true;
 
+    @property({ tooltip: 'Playable 建议关闭：不创建额外 Backdrop 精灵（-1 DrawCall）' })
+    enableOpaqueBackdrop = false;
+
     /** 归一化方向 */
     public readonly direction = new Vec2();
 
@@ -126,6 +129,17 @@ export class EasyTouchJoystick extends Component {
         return this.direction.y;
     }
 
+    public setOpaqueBackdropEnabled(enabled: boolean): void {
+        this.enableOpaqueBackdrop = enabled;
+        const root = this._joystickRoot ?? this.node.getChildByName('JoystickRoot');
+        const backdrop = root?.getChildByName('Backdrop');
+        if (backdrop) {
+            backdrop.active = enabled;
+        } else if (enabled && root) {
+            this._ensureOpaqueBackdrop(root);
+        }
+    }
+
     private _resolveNodes(): void {
         if (!this.background) {
             this.background = this.node.getChildByName('Background');
@@ -171,7 +185,9 @@ export class EasyTouchJoystick extends Component {
         this._joystickRoot = root;
         this._defaultRootPos.set(root.position);
         root.layer = Layers.Enum.UI_2D;
-        this._ensureOpaqueBackdrop(root);
+        if (this.enableOpaqueBackdrop) {
+            this._ensureOpaqueBackdrop(root);
+        }
 
         const centerAnchor = new Vec2(0.5, 0.5);
         this.background?.getComponent(UITransform)?.setAnchorPoint(centerAnchor);

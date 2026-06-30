@@ -259,7 +259,7 @@ export class AppearanceController extends Component {
             return;
         }
 
-        const material = renderer.getMaterialInstance(0);
+        const material = renderer.getMaterial(0);
         this._nan2DefaultTexture = material?.getProperty('mainTexture') as Texture2D | null;
     }
 

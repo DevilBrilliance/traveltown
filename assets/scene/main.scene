@@ -20012,24 +20012,24 @@
   },
   {
     "__type__": "cc.OctreeInfo",
-    "_enabled": false,
+    "_enabled": true,
     "_minPos": {
       "__type__": "cc.Vec3",
-      "x": -1024,
-      "y": -1024,
-      "z": -1024
+      "x": -24,
+      "y": -4,
+      "z": -32
     },
     "_maxPos": {
       "__type__": "cc.Vec3",
-      "x": 1024,
-      "y": 1024,
-      "z": 1024
+      "x": 88,
+      "y": 24,
+      "z": 52
     },
     "_depth": 8
   },
   {
     "__type__": "cc.SkinInfo",
-    "_enabled": true,
+    "_enabled": false,
     "_blurRadius": 0.01,
     "_sssIntensity": 3
   },

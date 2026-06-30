@@ -60,7 +60,7 @@ export class PlayAreaBoundary extends Component {
     playerRadius = 0.45;
 
     @property({ tooltip: '就绪后在控制台打印边界（调试用）' })
-    logBoundsOnReady = true;
+    logBoundsOnReady = false;
 
     private readonly _worldAabb = new geometry.AABB();
     private readonly _tmpAabb = new geometry.AABB();
@@ -124,6 +124,19 @@ export class PlayAreaBoundary extends Component {
         if (this._validateBounds()) {
             this._logBounds('auto');
         }
+    }
+
+    /** 供裁剪优化使用的可玩区 XZ 矩形（不含 playerRadius） */
+    public getPlayRect(): { minX: number; maxX: number; minZ: number; maxZ: number } | null {
+        if (!this._ready) {
+            return null;
+        }
+        return {
+            minX: this._minX,
+            maxX: this._maxX,
+            minZ: this._minZ,
+            maxZ: this._maxZ,
+        };
     }
 
     /** 将世界坐标限制在沙滩可玩区域内 */
