@@ -16,6 +16,7 @@ import { PlayableDrawCallOptimizer } from './PlayableDrawCallOptimizer';
 import { CurrencyDisplay } from '../currency/CurrencyDisplay';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { OrderManager } from '../order/OrderManager';
+import { RewardManager } from '../reward/RewardManager';
 
 const { ccclass, property } = _decorator;
 
@@ -40,6 +41,7 @@ export class GameStart extends Component {
         this._ensureCurrencyWallet();
         this._ensureCurrencyDisplay();
         this._ensureOrderManager();
+        this._ensureRewardManager();
         this._ensurePlayAreaBoundary();
         this._ensureDrawCallOptimizer();
         if (this.autoStart) {
@@ -109,5 +111,9 @@ export class GameStart extends Component {
 
     private _ensureOrderManager(): OrderManager {
         return OrderManager.ensure();
+    }
+
+    private _ensureRewardManager(): RewardManager {
+        return RewardManager.ensure();
     }
 }
