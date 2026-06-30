@@ -29,5 +29,8 @@ export const BODY_NODE_NAMES = ['nv2', 'nan2', 'nv1'] as const;
 /** Geometry 下道具节点名 */
 export const PROP_NODE_NAMES = ['duck02', 'duck01', 'ld'] as const;
 
-/** NPC_RIG 预制体路径（相对 assets） */
-export const NPC_RIG_PREFAB_PATH = 'models/模型动作/人物/NPC_RIG';
+/** NPC_RIG 路径（相对 assets/resources，不含扩展名） */
+export const NPC_RIG_PREFAB_PATH = 'characters/NPC_RIG';
+
+/** NPC_RIG FBX 导出的预制体子资源 UUID（resources 路径失败时的兜底） */
+export const NPC_RIG_PREFAB_UUID = 'ffc2f5d8-b0e0-4aad-99cf-0d7268106432@6dea6';

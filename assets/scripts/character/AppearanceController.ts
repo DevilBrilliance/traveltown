@@ -7,6 +7,7 @@ import {
     MeshRenderer,
     Node,
     Prefab,
+    resources,
     SkinnedMeshRenderer,
     Texture2D,
 } from 'cc';
@@ -15,6 +16,7 @@ import {
     CharacterAppearanceType,
     CUSTOMER_TEXTURE_PATHS,
     NPC_RIG_PREFAB_PATH,
+    NPC_RIG_PREFAB_UUID,
     PROP_NODE_NAMES,
 } from './CharacterAppearanceType';
 
@@ -64,32 +66,60 @@ export class AppearanceController extends Component {
 
     /**
      * 根据枚举创建 NPC_RIG 角色
+     * @param prefabOverride 可选，编辑器拖入的 Prefab 优先使用
      */
     public static create(
         parent: Node,
         appearance: CharacterAppearanceType,
         onCreated?: (controller: AppearanceController, characterNode: Node) => void,
+        prefabOverride?: Prefab | null,
     ): void {
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
-            console.error('[AppearanceController] 无法获取 main 资源包');
+        if (prefabOverride) {
+            AppearanceController._spawn(parent, appearance, prefabOverride, onCreated);
             return;
         }
 
-        bundle.load(NPC_RIG_PREFAB_PATH, Prefab, (err, prefab) => {
-            if (err || !prefab) {
-                console.error('[AppearanceController] NPC_RIG 加载失败', err);
+        AppearanceController._loadNpcRigPrefab((prefab) => {
+            AppearanceController._spawn(parent, appearance, prefab, onCreated);
+        }, (err) => {
+            console.error('[AppearanceController] NPC_RIG 加载失败', err);
+        });
+    }
+
+    private static _loadNpcRigPrefab(
+        onLoaded: (prefab: Prefab) => void,
+        onError: (err: Error) => void,
+    ): void {
+        resources.load(NPC_RIG_PREFAB_PATH, Prefab, (err, prefab) => {
+            if (!err && prefab) {
+                onLoaded(prefab);
                 return;
             }
 
-            const characterNode = instantiate(prefab);
-            parent.addChild(characterNode);
-
-            const controller = characterNode.getComponent(AppearanceController)
-                ?? characterNode.addComponent(AppearanceController);
-            controller.setAppearance(appearance);
-            onCreated?.(controller, characterNode);
+            // loadAny 第二参数是回调，不能传 Prefab 类型，否则会报 "cannot be invoked without 'new'"
+            assetManager.loadAny({ uuid: NPC_RIG_PREFAB_UUID, type: Prefab }, (err2, asset) => {
+                if (err2 || !asset) {
+                    onError(err2 ?? err ?? new Error('NPC_RIG not found'));
+                    return;
+                }
+                onLoaded(asset as Prefab);
+            });
         });
+    }
+
+    private static _spawn(
+        parent: Node,
+        appearance: CharacterAppearanceType,
+        prefab: Prefab,
+        onCreated?: (controller: AppearanceController, characterNode: Node) => void,
+    ): void {
+        const characterNode = instantiate(prefab);
+        parent.addChild(characterNode);
+
+        const controller = characterNode.getComponent(AppearanceController)
+            ?? characterNode.addComponent(AppearanceController);
+        controller.setAppearance(appearance);
+        onCreated?.(controller, characterNode);
     }
 
     /** 切换形象 */
