@@ -5,6 +5,7 @@ import {
     Node,
     Prefab,
     resources,
+    Vec3,
 } from 'cc';
 
 const { ccclass, property } = _decorator;
@@ -53,6 +54,7 @@ export class MainCtrl extends Component {
     private _spawnMainUI(prefab: Prefab): void {
         const node = instantiate(prefab);
         node.name = 'MainUI';
+        node.setPosition(Vec3.ZERO);
 
         const parent = this.node.parent ?? this.node;
         node.parent = parent;

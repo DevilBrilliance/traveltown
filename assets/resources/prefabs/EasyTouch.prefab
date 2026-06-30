@@ -360,8 +360,8 @@
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
-      "x": 0.5,
-      "y": 0.5
+      "x": 0,
+      "y": 0
     },
     "_id": ""
   },
@@ -411,7 +411,7 @@
   },
   {
     "__type__": "cc.CompPrefabInfo",
-    "fileId": "f1KZiClxJHHp+ElP7Xcf9u"
+    "fileId": "292Pls6UxD1LF90hV8V7qs"
   },
   {
     "__type__": "cc.PrefabInfo",

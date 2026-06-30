@@ -5,9 +5,11 @@ import {
     Component,
     director,
     instantiate,
+    Layers,
     Prefab,
     resources,
     UITransform,
+    Vec3,
     Widget,
 } from 'cc';
 
@@ -31,8 +33,11 @@ export class MainUI extends Component {
     }
 
     private _setupCanvas(): void {
+        this.node.setPosition(Vec3.ZERO);
+
         const uiTransform = this.node.getComponent(UITransform) ?? this.node.addComponent(UITransform);
         uiTransform.setContentSize(DESIGN_WIDTH, DESIGN_HEIGHT);
+        uiTransform.setAnchorPoint(0.5, 0.5);
 
         let canvas = this.node.getComponent(Canvas);
         if (!canvas) {
@@ -43,6 +48,7 @@ export class MainUI extends Component {
         const camNode = director.getScene()?.getChildByName('Main Camera');
         const camera = camNode?.getComponent(Camera) ?? null;
         if (camera) {
+            camera.visibility |= Layers.Enum.UI_2D;
             canvas.cameraComponent = camera;
         }
     }
@@ -57,6 +63,9 @@ export class MainUI extends Component {
             const joystick = instantiate(prefab);
             joystick.name = 'EasyTouch';
             joystick.parent = this.node;
+
+            const rootTransform = joystick.getComponent(UITransform);
+            rootTransform?.setAnchorPoint(0, 0);
 
             const widget = joystick.getComponent(Widget) ?? joystick.addComponent(Widget);
             widget.isAlignLeft = true;

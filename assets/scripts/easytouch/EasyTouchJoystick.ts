@@ -7,7 +7,6 @@ import {
     resources,
     Sprite,
     SpriteFrame,
-    Texture2D,
     UITransform,
     Vec2,
     Vec3,
@@ -117,8 +116,13 @@ export class EasyTouchJoystick extends Component {
     }
 
     private _loadSprites(): void {
-        this._loadSpriteToNode(this.background, BG_SPRITE_PATH);
-        this._loadSpriteWithFallback(this.stick, STICK_SPRITE_PATHS, 0);
+        // 预制体已绑定 SpriteFrame，仅在缺失时再动态加载
+        if (!this.background?.getComponent(Sprite)?.spriteFrame) {
+            this._loadSpriteToNode(this.background, BG_SPRITE_PATH);
+        }
+        if (!this.stick?.getComponent(Sprite)?.spriteFrame) {
+            this._loadSpriteWithFallback(this.stick, STICK_SPRITE_PATHS, 0);
+        }
     }
 
     private _loadSpriteWithFallback(node: Node | null, paths: string[], index: number): void {
@@ -126,12 +130,12 @@ export class EasyTouchJoystick extends Component {
             return;
         }
 
-        resources.load(`${paths[index]}/texture`, Texture2D, (err, texture) => {
-            if (err || !texture) {
+        resources.load(`${paths[index]}/spriteFrame`, SpriteFrame, (err, frame) => {
+            if (err || !frame) {
                 this._loadSpriteWithFallback(node, paths, index + 1);
                 return;
             }
-            this._applyTexture(node, texture);
+            this._applySpriteFrame(node, frame);
         });
     }
 
@@ -140,19 +144,17 @@ export class EasyTouchJoystick extends Component {
             return;
         }
 
-        resources.load(`${path}/texture`, Texture2D, (err, texture) => {
-            if (err || !texture) {
+        resources.load(`${path}/spriteFrame`, SpriteFrame, (err, frame) => {
+            if (err || !frame) {
                 console.warn(`[EasyTouchJoystick] 贴图加载失败: ${path}`, err);
                 return;
             }
-            this._applyTexture(node, texture);
+            this._applySpriteFrame(node, frame);
         });
     }
 
-    private _applyTexture(node: Node, texture: Texture2D): void {
+    private _applySpriteFrame(node: Node, frame: SpriteFrame): void {
         const sprite = node.getComponent(Sprite) ?? node.addComponent(Sprite);
-        const frame = new SpriteFrame();
-        frame.texture = texture;
         sprite.spriteFrame = frame;
     }
 
