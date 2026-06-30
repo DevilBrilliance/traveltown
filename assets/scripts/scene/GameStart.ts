@@ -11,6 +11,7 @@ import { CharacterAppearanceType } from '../character/CharacterAppearanceType';
 import { PlayerMovementController } from '../character/PlayerMovementController';
 import { CameraOrbitController } from '../camera/CameraOrbitController';
 import { bindCameraTouchUI } from '../camera/CameraTouchUISetup';
+import { PlayAreaBoundary } from './PlayAreaBoundary';
 
 const { ccclass, property } = _decorator;
 
@@ -32,6 +33,7 @@ export class GameStart extends Component {
     private _protagonist: Node | null = null;
 
     onLoad() {
+        this._ensurePlayAreaBoundary();
         if (this.autoStart) {
             this.startGame();
         }
@@ -65,5 +67,14 @@ export class GameStart extends Component {
 
     private _getSpawnParent(): Node {
         return this.node.parent ?? director.getScene()!;
+    }
+
+    private _ensurePlayAreaBoundary(): PlayAreaBoundary | null {
+        const island = director.getScene()?.getChildByName('Island');
+        if (!island) {
+            console.warn('[GameStart] 未找到 Island，无法创建沙滩边界');
+            return null;
+        }
+        return island.getComponent(PlayAreaBoundary) ?? island.addComponent(PlayAreaBoundary);
     }
 }

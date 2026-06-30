@@ -13,6 +13,7 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { CharacterAnimController } from './CharacterAnimController';
 import { CharacterAnimState } from './CharacterAnimState';
+import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 
 const { ccclass, property } = _decorator;
 
@@ -39,10 +40,14 @@ export class PlayerMovementController extends Component {
     @property({ tooltip: '跑步音效相对音量' })
     runSoundVolume = 1;
 
+    @property({ type: PlayAreaBoundary, tooltip: '沙滩边界，不填则自动查找' })
+    boundary: PlayAreaBoundary | null = null;
+
     private _anim: CharacterAnimController | null = null;
     private _isMoving = false;
 
     private readonly _worldDir = new Vec3();
+    private readonly _nextPos = new Vec3();
     private readonly _forward = new Vec3();
     private readonly _right = new Vec3();
     private readonly _worldEuler = new Vec3();
@@ -55,6 +60,7 @@ export class PlayerMovementController extends Component {
     start() {
         this._resolveJoystick();
         this._resolveCamera();
+        this._resolveBoundary();
     }
 
     onDestroy() {
@@ -78,11 +84,13 @@ export class PlayerMovementController extends Component {
 
         const speed = this.maxSpeed * joystick.magnitude;
         const pos = this.node.worldPosition;
-        this.node.setWorldPosition(
+        this._nextPos.set(
             pos.x + this._worldDir.x * speed * dt,
             pos.y,
             pos.z + this._worldDir.z * speed * dt,
         );
+        this.boundary?.clampWorldPosition(this._nextPos);
+        this.node.setWorldPosition(this._nextPos);
 
         this._updateRotation(dt);
         this._setMoving(true);
@@ -187,5 +195,14 @@ export class PlayerMovementController extends Component {
         const scene = director.getScene();
         const cameraNode = scene?.getChildByName('Main Camera');
         this.referenceCamera = cameraNode?.getComponent(Camera) ?? null;
+    }
+
+    private _resolveBoundary(): void {
+        if (this.boundary) {
+            return;
+        }
+        this.boundary = PlayAreaBoundary.instance
+            ?? director.getScene()?.getComponentInChildren(PlayAreaBoundary)
+            ?? null;
     }
 }
