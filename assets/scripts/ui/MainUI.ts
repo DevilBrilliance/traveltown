@@ -1,0 +1,78 @@
+import {
+    _decorator,
+    assetManager,
+    Camera,
+    Canvas,
+    Component,
+    director,
+    instantiate,
+    Prefab,
+    UITransform,
+    Widget,
+} from 'cc';
+
+const { ccclass, property } = _decorator;
+
+const EASY_TOUCH_PREFAB = 'prefabs/EasyTouch';
+const DESIGN_WIDTH = 960;
+const DESIGN_HEIGHT = 640;
+
+/**
+ * 主界面 UI 根节点：全屏 Canvas，左下角挂载 EasyTouch 摇杆。
+ */
+@ccclass('MainUI')
+export class MainUI extends Component {
+    @property({ tooltip: '摇杆距屏幕左下角的边距（设计分辨率像素）' })
+    edgeMargin = 36;
+
+    onLoad() {
+        this._setupCanvas();
+        this._spawnEasyTouch();
+    }
+
+    private _setupCanvas(): void {
+        const uiTransform = this.node.getComponent(UITransform) ?? this.node.addComponent(UITransform);
+        uiTransform.setContentSize(DESIGN_WIDTH, DESIGN_HEIGHT);
+
+        let canvas = this.node.getComponent(Canvas);
+        if (!canvas) {
+            canvas = this.node.addComponent(Canvas);
+        }
+        canvas.alignCanvasWithScreen = true;
+
+        const camNode = director.getScene()?.getChildByName('Main Camera');
+        const camera = camNode?.getComponent(Camera) ?? null;
+        if (camera) {
+            canvas.cameraComponent = camera;
+        }
+    }
+
+    private _spawnEasyTouch(): void {
+        const bundle = assetManager.getBundle('main') ?? assetManager.main;
+        if (!bundle) {
+            console.error('[MainUI] main 资源包不可用');
+            return;
+        }
+
+        bundle.load(EASY_TOUCH_PREFAB, Prefab, (err, prefab) => {
+            if (err || !prefab) {
+                console.error('[MainUI] EasyTouch 预制体加载失败', err);
+                return;
+            }
+
+            const joystick = instantiate(prefab);
+            joystick.name = 'EasyTouch';
+            joystick.parent = this.node;
+
+            const widget = joystick.getComponent(Widget) ?? joystick.addComponent(Widget);
+            widget.isAlignLeft = true;
+            widget.isAlignBottom = true;
+            widget.isAbsoluteLeft = true;
+            widget.isAbsoluteBottom = true;
+            widget.left = this.edgeMargin;
+            widget.bottom = this.edgeMargin;
+            widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+            widget.updateAlignment();
+        });
+    }
+}
