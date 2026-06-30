@@ -19,6 +19,8 @@ import {
     NPC_RIG_PREFAB_UUID,
     PROP_NODE_NAMES,
 } from './CharacterAppearanceType';
+import { CharacterAnimController } from './CharacterAnimController';
+import { getDefaultAnimForAppearance } from './CharacterAnimState';
 
 const { ccclass, property } = _decorator;
 
@@ -119,6 +121,12 @@ export class AppearanceController extends Component {
         const controller = characterNode.getComponent(AppearanceController)
             ?? characterNode.addComponent(AppearanceController);
         controller.setAppearance(appearance);
+
+        const animController = characterNode.getComponent(CharacterAnimController)
+            ?? characterNode.addComponent(CharacterAnimController);
+        animController.defaultState = getDefaultAnimForAppearance(appearance);
+        animController.play(animController.defaultState);
+
         onCreated?.(controller, characterNode);
     }
 
