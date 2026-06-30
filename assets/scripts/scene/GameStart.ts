@@ -13,6 +13,8 @@ import { CameraOrbitController } from '../camera/CameraOrbitController';
 import { bindCameraTouchUI } from '../camera/CameraTouchUISetup';
 import { PlayAreaBoundary } from './PlayAreaBoundary';
 import { PlayableDrawCallOptimizer } from './PlayableDrawCallOptimizer';
+import { CurrencyDisplay } from '../currency/CurrencyDisplay';
+import { CurrencyWallet } from '../currency/CurrencyWallet';
 
 const { ccclass, property } = _decorator;
 
@@ -34,6 +36,8 @@ export class GameStart extends Component {
     private _protagonist: Node | null = null;
 
     onLoad() {
+        this._ensureCurrencyWallet();
+        this._ensureCurrencyDisplay();
         this._ensurePlayAreaBoundary();
         this._ensureDrawCallOptimizer();
         if (this.autoStart) {
@@ -87,5 +91,17 @@ export class GameStart extends Component {
         }
         return island.getComponent(PlayableDrawCallOptimizer)
             ?? island.addComponent(PlayableDrawCallOptimizer);
+    }
+
+    private _ensureCurrencyWallet(): CurrencyWallet {
+        return CurrencyWallet.ensure();
+    }
+
+    private _ensureCurrencyDisplay(): CurrencyDisplay | null {
+        const canvas = director.getScene()?.getChildByName('mainCanvas');
+        if (!canvas) {
+            return null;
+        }
+        return canvas.getComponent(CurrencyDisplay) ?? canvas.addComponent(CurrencyDisplay);
     }
 }
