@@ -1,0 +1,171 @@
+import {
+    _decorator,
+    Camera,
+    Component,
+    director,
+    math,
+    Quat,
+    Vec2,
+    Vec3,
+} from 'cc';
+import { EasyTouchJoystick } from '../easytouch/EasyTouchJoystick';
+import { CharacterAnimController } from './CharacterAnimController';
+import { CharacterAnimState } from './CharacterAnimState';
+
+const { ccclass, property } = _decorator;
+
+/**
+ * 玩家移动：读取 EasyTouch 摇杆，在地面 XZ 平面移动并转向，同步跑步/待机动画。
+ */
+@ccclass('PlayerMovementController')
+export class PlayerMovementController extends Component {
+    @property({ tooltip: '最大移动速度（单位/秒）' })
+    maxSpeed = 10;
+
+    @property({ type: EasyTouchJoystick, tooltip: '不填则自动查找场景中的摇杆' })
+    joystick: EasyTouchJoystick | null = null;
+
+    @property({ type: Camera, tooltip: '不填则使用 Main Camera，将摇杆方向映射到地面' })
+    referenceCamera: Camera | null = null;
+
+    @property({ tooltip: '转身速度（度/秒），0 表示瞬间转向' })
+    rotateSpeed = 0;
+
+    private _anim: CharacterAnimController | null = null;
+    private _isMoving = false;
+
+    private readonly _worldDir = new Vec3();
+    private readonly _forward = new Vec3();
+    private readonly _right = new Vec3();
+    private readonly _worldEuler = new Vec3();
+    private readonly _targetQuat = new Quat();
+
+    onLoad() {
+        this._anim = this.getComponent(CharacterAnimController);
+    }
+
+    start() {
+        this._resolveJoystick();
+        this._resolveCamera();
+    }
+
+    update(dt: number) {
+        const joystick = this.joystick;
+        if (!joystick || joystick.magnitude <= 0) {
+            this._setMoving(false);
+            return;
+        }
+
+        this._joystickToWorldDirection(joystick.direction, this._worldDir);
+        if (this._worldDir.lengthSqr() < 1e-6) {
+            this._setMoving(false);
+            return;
+        }
+
+        const speed = this.maxSpeed * joystick.magnitude;
+        const pos = this.node.worldPosition;
+        this.node.setWorldPosition(
+            pos.x + this._worldDir.x * speed * dt,
+            pos.y,
+            pos.z + this._worldDir.z * speed * dt,
+        );
+
+        this._updateRotation(dt);
+        this._setMoving(true);
+    }
+
+    private _setMoving(moving: boolean): void {
+        if (moving === this._isMoving) {
+            return;
+        }
+        this._isMoving = moving;
+        if (moving) {
+            this._anim?.play(CharacterAnimState.PlayerRun);
+        } else {
+            this._anim?.play(CharacterAnimState.PlayerIdle);
+        }
+    }
+
+    private _updateRotation(dt: number): void {
+        const targetY = math.toDegree(Math.atan2(this._worldDir.x, this._worldDir.z));
+
+        if (this.rotateSpeed <= 0) {
+            Quat.fromEuler(this._targetQuat, 0, targetY, 0);
+            this.node.setWorldRotation(this._targetQuat);
+            return;
+        }
+
+        Quat.copy(this._targetQuat, this.node.worldRotation);
+        this._targetQuat.getEulerAngles(this._worldEuler);
+        let currentY = this._worldEuler.y;
+
+        let delta = targetY - currentY;
+        while (delta > 180) {
+            delta -= 360;
+        }
+        while (delta < -180) {
+            delta += 360;
+        }
+
+        const step = this.rotateSpeed * dt;
+        const newY = Math.abs(delta) <= step ? targetY : currentY + Math.sign(delta) * step;
+        Quat.fromEuler(this._targetQuat, 0, newY, 0);
+        this.node.setWorldRotation(this._targetQuat);
+    }
+
+    private _joystickToWorldDirection(input: Vec2, out: Vec3): void {
+        const camera = this.referenceCamera;
+        if (!camera) {
+            out.set(input.x, 0, input.y);
+            if (out.lengthSqr() > 1e-6) {
+                out.normalize();
+            }
+            return;
+        }
+
+        this._forward.set(camera.node.forward);
+        this._forward.y = 0;
+        if (this._forward.lengthSqr() > 1e-6) {
+            this._forward.normalize();
+        } else {
+            this._forward.set(0, 0, -1);
+        }
+
+        this._right.set(camera.node.right);
+        this._right.y = 0;
+        if (this._right.lengthSqr() > 1e-6) {
+            this._right.normalize();
+        } else {
+            this._right.set(1, 0, 0);
+        }
+
+        out.set(
+            this._right.x * input.x + this._forward.x * input.y,
+            0,
+            this._right.z * input.x + this._forward.z * input.y,
+        );
+        if (out.lengthSqr() > 1e-6) {
+            out.normalize();
+        }
+    }
+
+    private _resolveJoystick(): void {
+        if (this.joystick) {
+            return;
+        }
+        const scene = director.getScene();
+        this.joystick = scene?.getComponentInChildren(EasyTouchJoystick) ?? null;
+        if (!this.joystick) {
+            console.warn('[PlayerMovementController] 未找到 EasyTouchJoystick');
+        }
+    }
+
+    private _resolveCamera(): void {
+        if (this.referenceCamera) {
+            return;
+        }
+        const scene = director.getScene();
+        const cameraNode = scene?.getChildByName('Main Camera');
+        this.referenceCamera = cameraNode?.getComponent(Camera) ?? null;
+    }
+}

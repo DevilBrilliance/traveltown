@@ -8,6 +8,7 @@ import {
 } from 'cc';
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAppearanceType } from '../character/CharacterAppearanceType';
+import { PlayerMovementController } from '../character/PlayerMovementController';
 
 const { ccclass, property } = _decorator;
 
@@ -47,6 +48,7 @@ export class GameStart extends Component {
             (_controller, characterNode) => {
                 characterNode.name = 'Protagonist';
                 characterNode.setWorldPosition(this.spawnPosition);
+                characterNode.addComponent(PlayerMovementController);
                 this._protagonist = characterNode;
             },
             this.protagonistPrefab,
