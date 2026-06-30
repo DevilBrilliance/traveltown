@@ -1,8 +1,10 @@
 import {
     _decorator,
     BlockInputEvents,
+    Color,
     Component,
     EventTouch,
+    Layers,
     Node,
     resources,
     Sprite,
@@ -16,6 +18,7 @@ const { ccclass, property } = _decorator;
 
 const BG_SPRITE_PATH = 'textures/atlas/操纵/操纵_00002';
 const STICK_SPRITE_PATHS = ['textures/atlas/操纵/操纵_00000'];
+const BACKDROP_SPRITE_PATH = 'textures/atlas/whiteCirecle';
 
 /**
  * 虚拟摇杆（市面常见：默认固定位置显示，触摸区域内按下时整体跟到点击处再拖拽）
@@ -63,6 +66,7 @@ export class EasyTouchJoystick extends Component {
     private readonly _tmpVec3 = new Vec3();
 
     onLoad() {
+        this.node.layer = Layers.Enum.UI_2D;
         this._touchArea = this.node.getComponent(UITransform) ?? this.node.addComponent(UITransform);
         if (!this.node.getComponent(BlockInputEvents)) {
             this.node.addComponent(BlockInputEvents);
@@ -119,10 +123,12 @@ export class EasyTouchJoystick extends Component {
             }
 
             if (this.background) {
+                this.background.layer = Layers.Enum.UI_2D;
                 this.background.setPosition(0, 0, 0);
                 this.background.parent = root;
             }
             if (this.stick) {
+                this.stick.layer = Layers.Enum.UI_2D;
                 this.stick.setPosition(0, 0, 0);
                 this.stick.parent = root;
             }
@@ -137,10 +143,42 @@ export class EasyTouchJoystick extends Component {
 
         this._joystickRoot = root;
         this._defaultRootPos.set(root.position);
+        root.layer = Layers.Enum.UI_2D;
+        this._ensureOpaqueBackdrop(root);
 
         const centerAnchor = new Vec2(0.5, 0.5);
         this.background?.getComponent(UITransform)?.setAnchorPoint(centerAnchor);
         this.stick?.getComponent(UITransform)?.setAnchorPoint(centerAnchor);
+    }
+
+    /** 圆环背景中间透明，垫一层不透明底防止 3D 场景透出来 */
+    private _ensureOpaqueBackdrop(root: Node): void {
+        if (root.getChildByName('Backdrop')) {
+            return;
+        }
+
+        const bgUi = this.background?.getComponent(UITransform);
+        const size = bgUi ? Math.max(bgUi.width, bgUi.height) * 0.92 : 140;
+
+        const node = new Node('Backdrop');
+        node.layer = Layers.Enum.UI_2D;
+        node.parent = root;
+        node.setSiblingIndex(0);
+
+        const ui = node.addComponent(UITransform);
+        ui.setContentSize(size, size);
+        ui.setAnchorPoint(0.5, 0.5);
+
+        const sprite = node.addComponent(Sprite);
+        sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+        sprite.color = new Color(255, 255, 255, 255);
+
+        resources.load(`${BACKDROP_SPRITE_PATH}/spriteFrame`, SpriteFrame, (err, frame) => {
+            if (err || !frame) {
+                return;
+            }
+            sprite.spriteFrame = frame;
+        });
     }
 
     private _updateRadius(): void {
