@@ -24,6 +24,9 @@ const DESIGN_HEIGHT = 640;
  */
 @ccclass('MainUI')
 export class MainUI extends Component {
+    @property({ type: Camera, tooltip: 'UI 渲染相机，由 MainCtrl 传入或编辑器指定' })
+    uiCamera: Camera | null = null;
+
     @property({ tooltip: '摇杆距屏幕左下角的边距（设计分辨率像素）' })
     edgeMargin = 36;
 
@@ -45,12 +48,16 @@ export class MainUI extends Component {
         }
         canvas.alignCanvasWithScreen = true;
 
-        const camNode = director.getScene()?.getChildByName('Main Camera');
-        const camera = camNode?.getComponent(Camera) ?? null;
+        const camera = this.uiCamera ?? this._findMainCamera();
         if (camera) {
             camera.visibility |= Layers.Enum.UI_2D;
             canvas.cameraComponent = camera;
         }
+    }
+
+    private _findMainCamera(): Camera | null {
+        const camNode = director.getScene()?.getChildByName('Main Camera');
+        return camNode?.getComponent(Camera) ?? null;
     }
 
     private _spawnEasyTouch(): void {

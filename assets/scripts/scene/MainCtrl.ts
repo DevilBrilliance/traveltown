@@ -1,5 +1,6 @@
 import {
     _decorator,
+    Camera,
     Component,
     instantiate,
     Node,
@@ -7,6 +8,7 @@ import {
     resources,
     Vec3,
 } from 'cc';
+import { MainUI } from '../ui/MainUI';
 
 const { ccclass, property } = _decorator;
 
@@ -20,6 +22,9 @@ const MAIN_UI_PREFAB_PATH = 'prefabs/MainUI';
 export class MainCtrl extends Component {
     @property({ tooltip: '启动时自动创建 MainUI' })
     autoCreateMainUI = true;
+
+    @property({ type: Camera, tooltip: 'MainUI 使用的渲染相机，拖入 Main Camera' })
+    mainCamera: Camera | null = null;
 
     private _mainUINode: Node | null = null;
 
@@ -55,6 +60,11 @@ export class MainCtrl extends Component {
         const node = instantiate(prefab);
         node.name = 'MainUI';
         node.setPosition(Vec3.ZERO);
+
+        const mainUI = node.getComponent(MainUI);
+        if (mainUI && this.mainCamera) {
+            mainUI.uiCamera = this.mainCamera;
+        }
 
         const parent = this.node.parent ?? this.node;
         node.parent = parent;
