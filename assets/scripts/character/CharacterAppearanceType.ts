@@ -17,10 +17,16 @@ export enum CharacterAppearanceType {
     Customer1,
 }
 
-/** 顾客贴图路径（相对 assets） */
+/** 顾客贴图路径（相对 assets/resources，不含扩展名） */
 export const CUSTOMER_TEXTURE_PATHS: Record<CharacterAppearanceType.Customer0 | CharacterAppearanceType.Customer1, string> = {
-    [CharacterAppearanceType.Customer0]: 'models/模型/Texture/人物/顾客0',
-    [CharacterAppearanceType.Customer1]: 'models/模型/Texture/人物/顾客1',
+    [CharacterAppearanceType.Customer0]: 'charaction/char/chartietu/顾客0',
+    [CharacterAppearanceType.Customer1]: 'charaction/char/chartietu/顾客1',
+};
+
+/** 顾客贴图 Texture2D 子资源 UUID（resources 路径失败时的兜底） */
+export const CUSTOMER_TEXTURE_UUIDS: Record<CharacterAppearanceType.Customer0 | CharacterAppearanceType.Customer1, string> = {
+    [CharacterAppearanceType.Customer0]: '82f66091-4eb7-4cfb-b40e-88a6fcb97e02@6c48a',
+    [CharacterAppearanceType.Customer1]: '77b31af9-e501-4aa9-9e98-59d7e5f950b9@6c48a',
 };
 
 /** Geometry 下身体节点名 */

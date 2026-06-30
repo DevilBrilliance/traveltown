@@ -15,6 +15,7 @@ import {
     BODY_NODE_NAMES,
     CharacterAppearanceType,
     CUSTOMER_TEXTURE_PATHS,
+    CUSTOMER_TEXTURE_UUIDS,
     NPC_RIG_PREFAB_PATH,
     NPC_RIG_PREFAB_UUID,
     PROP_NODE_NAMES,
@@ -263,22 +264,11 @@ export class AppearanceController extends Component {
     }
 
     private _preloadCustomerTextures(): void {
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
-            return;
-        }
-
         const customerTypes = [CharacterAppearanceType.Customer0, CharacterAppearanceType.Customer1] as const;
         for (const type of customerTypes) {
-            const path = CUSTOMER_TEXTURE_PATHS[type];
-            bundle.load(`${path}/texture`, Texture2D, (err, texture) => {
-                if (err || !texture) {
-                    console.warn(`[AppearanceController] 顾客贴图加载失败: ${path}`, err);
-                    return;
-                }
-                this._customerTextures.set(type, texture);
+            this._loadCustomerTexture(type, (texture) => {
                 if (this._currentAppearance === type) {
-                    this._applyCustomerTexture(type);
+                    this._setNan2ChildTexture(texture);
                 }
             });
         }
@@ -333,21 +323,51 @@ export class AppearanceController extends Component {
             return;
         }
 
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
+        this._loadCustomerTexture(type, (texture) => {
+            this._setNan2ChildTexture(texture);
+        });
+    }
+
+    private _loadCustomerTexture(
+        type: CharacterAppearanceType.Customer0 | CharacterAppearanceType.Customer1,
+        onLoaded: (texture: Texture2D) => void,
+    ): void {
+        const cached = this._customerTextures.get(type);
+        if (cached) {
+            onLoaded(cached);
             return;
         }
 
         const path = CUSTOMER_TEXTURE_PATHS[type];
-        bundle.load(`${path}/texture`, Texture2D, (err, texture) => {
-            if (err || !texture) {
-                console.warn(`[AppearanceController] 顾客贴图加载失败: ${path}`, err);
+        const subPath = `${path}/texture`;
+
+        resources.load(subPath, Texture2D, (err, texture) => {
+            if (!err && texture) {
+                this._customerTextures.set(type, texture);
+                onLoaded(texture);
                 return;
             }
-            this._customerTextures.set(type, texture);
-            if (this._currentAppearance === type) {
-                this._setNan2ChildTexture(texture);
-            }
+
+            resources.load(path, Texture2D, (err2, texture2) => {
+                if (!err2 && texture2) {
+                    this._customerTextures.set(type, texture2);
+                    onLoaded(texture2);
+                    return;
+                }
+
+                assetManager.loadAny(
+                    { uuid: CUSTOMER_TEXTURE_UUIDS[type], type: Texture2D },
+                    (err3, asset) => {
+                        if (err3 || !asset) {
+                            console.warn(`[AppearanceController] 顾客贴图加载失败: ${path}`, err3 ?? err2 ?? err);
+                            return;
+                        }
+                        const loaded = asset as Texture2D;
+                        this._customerTextures.set(type, loaded);
+                        onLoaded(loaded);
+                    },
+                );
+            });
         });
     }
 

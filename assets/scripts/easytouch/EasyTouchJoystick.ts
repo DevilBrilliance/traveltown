@@ -3,7 +3,11 @@ import {
     BlockInputEvents,
     Color,
     Component,
+    EventKeyboard,
     EventTouch,
+    input,
+    Input,
+    KeyCode,
     Layers,
     Node,
     resources,
@@ -49,6 +53,12 @@ export class EasyTouchJoystick extends Component {
     @property({ tooltip: '松手后摇杆视觉回到默认位置' })
     resetOnRelease = true;
 
+    @property({ tooltip: '启用 WASD / 方向键 键盘映射' })
+    keyboardEnabled = true;
+
+    @property({ tooltip: '键盘输入时同步移动摇杆头（未触摸时）' })
+    syncStickWithKeyboard = true;
+
     /** 归一化方向 */
     public readonly direction = new Vec2();
 
@@ -57,6 +67,9 @@ export class EasyTouchJoystick extends Component {
 
     public isTouching = false;
 
+    /** 当前是否由键盘驱动输入 */
+    public isKeyboardActive = false;
+
     private _touchArea: UITransform | null = null;
     private _joystickRoot: Node | null = null;
     private _defaultRootPos = new Vec3();
@@ -64,6 +77,12 @@ export class EasyTouchJoystick extends Component {
     private _touchId = -1;
     private readonly _tmpVec2 = new Vec2();
     private readonly _tmpVec3 = new Vec3();
+    private readonly _keyState = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+    };
 
     onLoad() {
         this.node.layer = Layers.Enum.UI_2D;
@@ -82,6 +101,11 @@ export class EasyTouchJoystick extends Component {
         this.node.on(Node.EventType.TOUCH_MOVE, this._onTouchMove, this);
         this.node.on(Node.EventType.TOUCH_END, this._onTouchEnd, this);
         this.node.on(Node.EventType.TOUCH_CANCEL, this._onTouchEnd, this);
+
+        if (this.keyboardEnabled) {
+            input.on(Input.EventType.KEY_DOWN, this._onKeyDown, this);
+            input.on(Input.EventType.KEY_UP, this._onKeyUp, this);
+        }
     }
 
     onDestroy() {
@@ -89,6 +113,9 @@ export class EasyTouchJoystick extends Component {
         this.node.off(Node.EventType.TOUCH_MOVE, this._onTouchMove, this);
         this.node.off(Node.EventType.TOUCH_END, this._onTouchEnd, this);
         this.node.off(Node.EventType.TOUCH_CANCEL, this._onTouchEnd, this);
+
+        input.off(Input.EventType.KEY_DOWN, this._onKeyDown, this);
+        input.off(Input.EventType.KEY_UP, this._onKeyUp, this);
     }
 
     public get horizontal(): number {
@@ -320,6 +347,9 @@ export class EasyTouchJoystick extends Component {
         this.isTouching = false;
         this._resetVisual(this.resetOnRelease);
         this.node.emit('joystick-end');
+        if (this.keyboardEnabled) {
+            this._updateFromKeyboard();
+        }
     }
 
     /** 根据触摸点相对 JoystickRoot 中心的位置更新摇杆头 */
@@ -357,9 +387,104 @@ export class EasyTouchJoystick extends Component {
     private _resetVisual(resetRoot: boolean): void {
         this.direction.set(0, 0);
         this.magnitude = 0;
+        this.isKeyboardActive = false;
         this.stick?.setPosition(0, 0, 0);
         if (resetRoot && this._joystickRoot) {
             this._joystickRoot.setPosition(this._defaultRootPos);
         }
+    }
+
+    private _onKeyDown(event: EventKeyboard): void {
+        if (!this.keyboardEnabled || this.isTouching) {
+            return;
+        }
+        if (this._applyKeyCode(event.keyCode, true)) {
+            this._updateFromKeyboard();
+        }
+    }
+
+    private _onKeyUp(event: EventKeyboard): void {
+        if (!this.keyboardEnabled || this.isTouching) {
+            return;
+        }
+        if (this._applyKeyCode(event.keyCode, false)) {
+            this._updateFromKeyboard();
+        }
+    }
+
+    private _applyKeyCode(code: KeyCode, pressed: boolean): boolean {
+        switch (code) {
+            case KeyCode.KEY_W:
+            case KeyCode.ARROW_UP:
+                this._keyState.up = pressed;
+                return true;
+            case KeyCode.KEY_S:
+            case KeyCode.ARROW_DOWN:
+                this._keyState.down = pressed;
+                return true;
+            case KeyCode.KEY_A:
+            case KeyCode.ARROW_LEFT:
+                this._keyState.left = pressed;
+                return true;
+            case KeyCode.KEY_D:
+            case KeyCode.ARROW_RIGHT:
+                this._keyState.right = pressed;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /** WASD / 方向键 → direction + magnitude，与摇杆输出一致 */
+    private _updateFromKeyboard(): void {
+        if (this.isTouching) {
+            return;
+        }
+
+        let x = 0;
+        let y = 0;
+        if (this._keyState.left) {
+            x -= 1;
+        }
+        if (this._keyState.right) {
+            x += 1;
+        }
+        if (this._keyState.up) {
+            y += 1;
+        }
+        if (this._keyState.down) {
+            y -= 1;
+        }
+
+        if (x === 0 && y === 0) {
+            if (this.isKeyboardActive) {
+                this.isKeyboardActive = false;
+                this.direction.set(0, 0);
+                this.magnitude = 0;
+                if (this.syncStickWithKeyboard) {
+                    this.stick?.setPosition(0, 0, 0);
+                }
+                this.node.emit('joystick-end');
+            }
+            return;
+        }
+
+        const len = Math.hypot(x, y);
+        const normX = x / len;
+        const normY = y / len;
+
+        this.direction.set(normX, normY);
+        this.magnitude = 1;
+
+        if (this.syncStickWithKeyboard) {
+            this.stick?.setPosition(normX * this._radius, normY * this._radius, 0);
+        }
+
+        if (!this.isKeyboardActive) {
+            this.isKeyboardActive = true;
+            this.node.emit('joystick-start', this.direction.clone(), this.magnitude);
+            return;
+        }
+        this.node.emit('joystick-move', this.direction.clone(), this.magnitude);
     }
 }

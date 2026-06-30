@@ -26,7 +26,7 @@ export enum SoundEffect {
     BgmHappyWaves,
 }
 
-/** 枚举 -> 资源路径（相对 assets 目录，不含扩展名） */
+/** 枚举 -> 资源路径（相对 assets/resources，不含扩展名） */
 export const SOUND_PATHS: Record<SoundEffect, string> = {
     [SoundEffect.Upgrade]: 'audios/升级音效',
     [SoundEffect.Appear02]: 'audios/出现02',

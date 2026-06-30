@@ -1,10 +1,11 @@
 import {
     _decorator,
-    assetManager,
     AudioClip,
     AudioSource,
     Component,
     director,
+    Node,
+    resources,
 } from 'cc';
 import { SOUND_PATHS, SoundEffect } from './SoundEffect';
 
@@ -19,6 +20,16 @@ export class AudioController extends Component {
         return AudioController._instance;
     }
 
+    /** 获取或创建全局音效控制器 */
+    public static ensure(): AudioController {
+        if (AudioController._instance) {
+            return AudioController._instance;
+        }
+        const node = new Node('AudioController');
+        director.getScene()?.addChild(node);
+        return node.addComponent(AudioController)!;
+    }
+
     @property({ tooltip: '默认音量 0~1' })
     defaultVolume = 1;
 
@@ -30,6 +41,7 @@ export class AudioController extends Component {
     private _muted = false;
     private _volume = 1;
     private _loopEffect: SoundEffect | null = null;
+    private _pendingLoop: { effect: SoundEffect; volumeScale: number } | null = null;
 
     onLoad() {
         if (AudioController._instance && AudioController._instance !== this) {
@@ -138,9 +150,13 @@ export class AudioController extends Component {
 
     /** 播放循环音效（如跑步声） */
     public playLoop(effect: SoundEffect, volumeScale = 1): void {
+        if (this._muted) {
+            return;
+        }
+
         const clip = this._clipCache.get(effect);
         if (!clip || !this._loopSource) {
-            console.warn(`[AudioController] 循环音效未加载: SoundEffect.${SoundEffect[effect]}`);
+            this._pendingLoop = { effect, volumeScale };
             return;
         }
 
@@ -148,15 +164,17 @@ export class AudioController extends Component {
             return;
         }
 
+        this._pendingLoop = null;
         this._loopEffect = effect;
         this._loopSource.stop();
         this._loopSource.clip = clip;
-        this._loopSource.volume = this._muted ? 0 : this._volume * volumeScale;
+        this._loopSource.volume = this._volume * volumeScale;
         this._loopSource.play();
     }
 
     /** 停止循环音效 */
     public stopLoop(): void {
+        this._pendingLoop = null;
         this._loopEffect = null;
         this._loopSource?.stop();
     }
@@ -172,22 +190,20 @@ export class AudioController extends Component {
     }
 
     private _preloadClips(): void {
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
-            console.error('[AudioController] 无法获取 main 资源包');
-            return;
-        }
-
         const entries = Object.entries(SOUND_PATHS) as [string, string][];
         let pending = entries.length;
 
         for (const [key, path] of entries) {
-            bundle.load(path, AudioClip, (err, clip) => {
+            resources.load(path, AudioClip, (err, clip) => {
                 pending -= 1;
-                if (err) {
+                if (err || !clip) {
                     console.warn(`[AudioController] 加载失败: ${path}`, err);
-                } else if (clip) {
-                    this._clipCache.set(Number(key) as SoundEffect, clip);
+                } else {
+                    const effect = Number(key) as SoundEffect;
+                    this._clipCache.set(effect, clip);
+                    if (this._pendingLoop?.effect === effect) {
+                        this.playLoop(this._pendingLoop.effect, this._pendingLoop.volumeScale);
+                    }
                 }
 
                 if (pending <= 0) {

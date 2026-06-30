@@ -9,6 +9,8 @@ import {
     Vec3,
 } from 'cc';
 import { EasyTouchJoystick } from '../easytouch/EasyTouchJoystick';
+import { AudioController } from '../audio/AudioController';
+import { SoundEffect } from '../audio/SoundEffect';
 import { CharacterAnimController } from './CharacterAnimController';
 import { CharacterAnimState } from './CharacterAnimState';
 
@@ -31,6 +33,12 @@ export class PlayerMovementController extends Component {
     @property({ tooltip: '转身速度（度/秒），0 表示瞬间转向' })
     rotateSpeed = 0;
 
+    @property({ tooltip: '跑步时播放跑步循环音效' })
+    runSoundEnabled = true;
+
+    @property({ tooltip: '跑步音效相对音量' })
+    runSoundVolume = 1;
+
     private _anim: CharacterAnimController | null = null;
     private _isMoving = false;
 
@@ -47,6 +55,12 @@ export class PlayerMovementController extends Component {
     start() {
         this._resolveJoystick();
         this._resolveCamera();
+    }
+
+    onDestroy() {
+        if (this._isMoving && this.runSoundEnabled) {
+            AudioController.instance?.stopLoop();
+        }
     }
 
     update(dt: number) {
@@ -81,8 +95,14 @@ export class PlayerMovementController extends Component {
         this._isMoving = moving;
         if (moving) {
             this._anim?.play(CharacterAnimState.PlayerRun);
+            if (this.runSoundEnabled) {
+                AudioController.ensure().playLoop(SoundEffect.Run, this.runSoundVolume);
+            }
         } else {
             this._anim?.play(CharacterAnimState.PlayerIdle);
+            if (this.runSoundEnabled) {
+                AudioController.instance?.stopLoop();
+            }
         }
     }
 
