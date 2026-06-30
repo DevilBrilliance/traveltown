@@ -1,10 +1,10 @@
 import {
     _decorator,
-    assetManager,
     Component,
     instantiate,
     Node,
     Prefab,
+    resources,
 } from 'cc';
 
 const { ccclass, property } = _decorator;
@@ -41,13 +41,7 @@ export class MainCtrl extends Component {
             return;
         }
 
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
-            console.error('[MainCtrl] main 资源包不可用');
-            return;
-        }
-
-        bundle.load(MAIN_UI_PREFAB_PATH, Prefab, (err, prefab) => {
+        resources.load(MAIN_UI_PREFAB_PATH, Prefab, (err, prefab) => {
             if (err || !prefab) {
                 console.error('[MainCtrl] MainUI 预制体加载失败', err);
                 return;

@@ -1,12 +1,12 @@
 import {
     _decorator,
-    assetManager,
     Camera,
     Canvas,
     Component,
     director,
     instantiate,
     Prefab,
+    resources,
     UITransform,
     Widget,
 } from 'cc';
@@ -48,13 +48,7 @@ export class MainUI extends Component {
     }
 
     private _spawnEasyTouch(): void {
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
-            console.error('[MainUI] main 资源包不可用');
-            return;
-        }
-
-        bundle.load(EASY_TOUCH_PREFAB, Prefab, (err, prefab) => {
+        resources.load(EASY_TOUCH_PREFAB, Prefab, (err, prefab) => {
             if (err || !prefab) {
                 console.error('[MainUI] EasyTouch 预制体加载失败', err);
                 return;

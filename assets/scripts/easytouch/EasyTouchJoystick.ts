@@ -1,10 +1,10 @@
 import {
     _decorator,
-    assetManager,
     BlockInputEvents,
     Component,
     EventTouch,
     Node,
+    resources,
     Sprite,
     SpriteFrame,
     Texture2D,
@@ -17,7 +17,6 @@ const { ccclass, property } = _decorator;
 
 const BG_SPRITE_PATH = 'textures/atlas/操纵/操纵_00002';
 const STICK_SPRITE_PATHS = [
-    'textures/atlas/操纵/操纵_00001',
     'textures/atlas/操纵/操纵_00000',
 ];
 
@@ -30,7 +29,7 @@ export class EasyTouchJoystick extends Component {
     @property({ type: Node, tooltip: '背景节点（操纵_00002）' })
     background: Node | null = null;
 
-    @property({ type: Node, tooltip: '摇杆节点（操纵_00001）' })
+    @property({ type: Node, tooltip: '摇杆节点（操纵_00000）' })
     stick: Node | null = null;
 
     @property({ tooltip: '摇杆最大偏移半径，0 表示自动取背景宽度的一半' })
@@ -127,12 +126,7 @@ export class EasyTouchJoystick extends Component {
             return;
         }
 
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
-            return;
-        }
-
-        bundle.load(`${paths[index]}/texture`, Texture2D, (err, texture) => {
+        resources.load(`${paths[index]}/texture`, Texture2D, (err, texture) => {
             if (err || !texture) {
                 this._loadSpriteWithFallback(node, paths, index + 1);
                 return;
@@ -146,12 +140,7 @@ export class EasyTouchJoystick extends Component {
             return;
         }
 
-        const bundle = assetManager.getBundle('main') ?? assetManager.main;
-        if (!bundle) {
-            return;
-        }
-
-        bundle.load(`${path}/texture`, Texture2D, (err, texture) => {
+        resources.load(`${path}/texture`, Texture2D, (err, texture) => {
             if (err || !texture) {
                 console.warn(`[EasyTouchJoystick] 贴图加载失败: ${path}`, err);
                 return;
