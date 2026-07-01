@@ -50434,44 +50434,10 @@
     "unlockTarget": {
       "__id__": 1988
     },
-    "uiPrefab": null,
-    "planePrefab": {
-      "__uuid__": "7eb81888-d88a-4aea-9cd2-326e4d035e37@3c3f1",
-      "__expectedType__": "cc.Prefab"
-    },
-    "uiLocalOffset": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0.03,
-      "z": 0
-    },
-    "uiLocalEuler": {
-      "__type__": "cc.Vec3",
-      "x": -90,
-      "y": 0,
-      "z": 0
-    },
-    "uiLocalScale": {
-      "__type__": "cc.Vec3",
-      "x": 0.006,
-      "y": 0.006,
-      "z": 0.006
-    },
-    "planeScale": {
-      "__type__": "cc.Vec3",
-      "x": 1.2,
-      "y": 1,
-      "z": 1.2
-    },
     "planeYOffset": 0.02,
-    "planeLocalEuler": {
-      "__type__": "cc.Vec3",
-      "x": -90,
-      "y": 0,
-      "z": 0
-    },
     "triggerRadius": 1.4,
     "autoPurchaseOnEnter": true,
+    "drainPerSecond": 20,
     "playerNode": null,
     "dimWhenUnaffordable": true,
     "_id": "70TRLbXUdDaIbyTjZcjG29"

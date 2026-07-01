@@ -167,22 +167,24 @@ export class PurchaseZoneGroundPanel extends Component {
         let x = -0.12 - groupW * 0.5 + digitW * 0.5;
 
         for (const ch of amountText) {
+            const uv = atlas.getUv(ch);
             specs.push({
                 cx: x,
                 cy: 0,
                 width: digitW,
                 height: digitH,
-                uv: atlas.getUv(ch),
+                cornerUvs: [uv.u0, uv.v1, uv.u1, uv.v1, uv.u1, uv.v0, uv.u0, uv.v0],
             });
             x += digitW + spacing;
         }
 
+        const plusUv = atlas.getUv('+');
         specs.push({
             cx: 0.28,
             cy: 0,
             width: 0.12,
             height: digitH,
-            uv: atlas.getUv('+'),
+            cornerUvs: [plusUv.u0, plusUv.v1, plusUv.u1, plusUv.v1, plusUv.u1, plusUv.v0, plusUv.u0, plusUv.v0],
         });
         return specs;
     }

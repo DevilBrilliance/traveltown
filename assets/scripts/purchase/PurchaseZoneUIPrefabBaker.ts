@@ -1,35 +1,47 @@
-import { Color, Label, Layers, MeshRenderer, Node, Sprite, Texture2D, UITransform, Vec3 } from 'cc';
-import { GroundDigitAtlas } from './GroundDigitAtlas';
-import { addMergedTexturedQuads, addTexturedQuad, GroundQuadSpec, uvFromSpriteFrame } from './GroundQuadMesh';
+import {
+    Color,
+    Label,
+    Layers,
+    MeshRenderer,
+    Node,
+    Texture2D,
+    Sprite,
+    UITransform,
+    Vec3,
+} from 'cc';
+import { addTexturedQuad, uvCornersFromSpriteFrame } from './GroundQuadMesh';
 
 /** 贴地 mesh 根节点绕 X -90° */
 const PANEL_FLAT_EULER_X = -90;
 const PANEL_LIFT_Y = 0.006;
-
-/**
- * 各图层之间的高度差（局部 Z，旋转后变为世界 Y）。
- * 同一高度的多个面片会互相 Z-fighting（摄像机一动就闪烁），
- * 所以底板、图标、文字必须像叠纸片一样错开一点点高度。
- */
 const LAYER_STEP = 0.0015;
 
-export interface AmountAnchor {
-    cx: number;
-    cy: number;
-    height: number;
+const _tmpWorld = new Vec3();
+const _tmpLocal = new Vec3();
+
+interface TextMeshEntry {
+    renderer: MeshRenderer;
+    texture: Texture2D;
+    canvas: HTMLCanvasElement;
+    ctx: CanvasRenderingContext2D;
+    widthPx: number;
+    heightPx: number;
+    fontSize: number;
+    bold: boolean;
+    textColor: Color;
+    outlineColor: Color;
+    outlineWidth: number;
 }
 
 export interface BakedPurchaseUI {
     panelRoot: Node;
     renderers: MeshRenderer[];
-    amountAnchor: AmountAnchor | null;
-    textRenderer: MeshRenderer | null;
     setAmount(amount: number): void;
     setAffordable(affordable: boolean, dimWhenUnaffordable: boolean): void;
     destroy(): void;
 }
 
-/** 读取预制体 Sprite / Label 布局，烘焙为 DEFAULT 层 Mesh（可被 3D 遮挡） */
+/** 读取预制体布局：Sprite + Text 全部烘焙为可遮挡 Mesh */
 export function bakePurchaseUIPrefab(uiRoot: Node, meshParent: Node, uiScale: Vec3): BakedPurchaseUI {
     const scale = uiScale.x;
     const panelRoot = new Node('GroundMesh');
@@ -38,60 +50,44 @@ export function bakePurchaseUIPrefab(uiRoot: Node, meshParent: Node, uiScale: Ve
     panelRoot.setRotationFromEuler(PANEL_FLAT_EULER_X, 0, 0);
     panelRoot.layer = Layers.Enum.DEFAULT;
 
+    const rootUi = uiRoot.getComponent(UITransform);
     const renderers: MeshRenderer[] = [];
-    const sprites = uiRoot.getComponentsInChildren(Sprite);
+    const textEntries: TextMeshEntry[] = [];
     let layerIndex = 0;
 
-    for (const sprite of sprites) {
+    for (const sprite of uiRoot.getComponentsInChildren(Sprite)) {
         if (!sprite.enabled || !sprite.spriteFrame) {
             continue;
         }
-        const renderer = _bakeSprite(sprite, uiRoot, panelRoot, scale, layerIndex * LAYER_STEP);
+        const renderer = _bakeSprite(sprite, rootUi, panelRoot, scale, layerIndex * LAYER_STEP);
         layerIndex += 1;
         if (renderer) {
             renderers.push(renderer);
         }
     }
 
-    /** 文字始终叠在最上层 */
     const textZOffset = (layerIndex + 1) * LAYER_STEP;
-    const amountAnchor = _readAmountAnchor(uiRoot, scale);
-    let textRenderer: MeshRenderer | null = null;
-    let currentAmount = '';
+    for (const label of uiRoot.getComponentsInChildren(Label)) {
+        if (!label.enabled) {
+            continue;
+        }
+        const entry = _bakeLabelToMesh(label, rootUi, panelRoot, scale, textZOffset);
+        if (entry) {
+            textEntries.push(entry);
+            renderers.push(entry.renderer);
+        }
+    }
+
     let isAffordable = true;
     let dimEnabled = true;
 
     const api: BakedPurchaseUI = {
         panelRoot,
         renderers,
-        amountAnchor,
-        textRenderer: null,
         setAmount(amount: number) {
             const text = `${amount}`;
-            if (text === currentAmount && textRenderer?.isValid) {
-                return;
-            }
-            currentAmount = text;
-            if (textRenderer?.isValid) {
-                const idx = renderers.indexOf(textRenderer);
-                if (idx >= 0) {
-                    renderers.splice(idx, 1);
-                }
-                textRenderer.node.destroy();
-            }
-            textRenderer = amountAnchor
-                ? _buildAmountMesh(panelRoot, amountAnchor, text, textZOffset)
-                : null;
-            api.textRenderer = textRenderer;
-            if (textRenderer) {
-                renderers.push(textRenderer);
-            }
-            if (!isAffordable && dimEnabled) {
-                for (const renderer of renderers) {
-                    if (renderer.isValid) {
-                        _setRendererAlpha(renderer, 140);
-                    }
-                }
+            for (const entry of textEntries) {
+                _drawText(entry, text);
             }
         },
         setAffordable(nextAffordable: boolean, dimWhenUnaffordable: boolean) {
@@ -102,13 +98,15 @@ export function bakePurchaseUIPrefab(uiRoot: Node, meshParent: Node, uiScale: Ve
             }
             const alpha = nextAffordable ? 255 : 140;
             for (const renderer of renderers) {
-                if (!renderer.isValid) {
-                    continue;
+                if (renderer.isValid) {
+                    _setRendererAlpha(renderer, alpha);
                 }
-                _setRendererAlpha(renderer, alpha);
             }
         },
         destroy() {
+            for (const entry of textEntries) {
+                entry.texture.destroy();
+            }
             panelRoot.destroy();
         },
     };
@@ -118,93 +116,121 @@ export function bakePurchaseUIPrefab(uiRoot: Node, meshParent: Node, uiScale: Ve
 
 function _bakeSprite(
     sprite: Sprite,
-    uiRoot: Node,
+    rootUi: UITransform | null,
     panelRoot: Node,
     scale: number,
     zOffset: number,
 ): MeshRenderer | null {
     const frame = sprite.spriteFrame;
     const texture = frame?.texture as Texture2D | null;
-    if (!frame || !texture) {
+    const nodeUi = sprite.node.getComponent(UITransform);
+    if (!frame || !texture || !nodeUi) {
         return null;
     }
 
-    const ui = sprite.node.getComponent(UITransform);
-    if (!ui) {
-        return null;
-    }
-
-    const local = _localPosRelativeTo(uiRoot, sprite.node);
-    const cx = local.x * scale;
-    const cy = local.y * scale;
-    const width = ui.contentSize.width * scale;
-    const height = ui.contentSize.height * scale;
-    const tint = sprite.color.clone();
-
+    const layout = _layoutInRoot(rootUi, sprite.node, nodeUi, scale);
     return addTexturedQuad(
         panelRoot,
         sprite.node.name,
         texture,
-        width,
-        height,
-        { x: cx, y: cy },
-        tint,
-        uvFromSpriteFrame(frame),
+        layout.width,
+        layout.height,
+        { x: layout.cx, y: layout.cy },
+        sprite.color.clone(),
+        uvCornersFromSpriteFrame(frame),
         zOffset,
     );
 }
 
-function _readAmountAnchor(uiRoot: Node, scale: number): AmountAnchor | null {
-    const label = uiRoot.getComponentInChildren(Label);
-    if (!label) {
+function _bakeLabelToMesh(
+    label: Label,
+    rootUi: UITransform | null,
+    panelRoot: Node,
+    scale: number,
+    zOffset: number,
+): TextMeshEntry | null {
+    const nodeUi = label.node.getComponent(UITransform);
+    if (!nodeUi) {
         return null;
     }
-    const ui = label.node.getComponent(UITransform);
-    if (!ui) {
+
+    const layout = _layoutInRoot(rootUi, label.node, nodeUi, scale);
+    const widthPx = Math.max(64, Math.ceil(nodeUi.contentSize.width * 2));
+    const heightPx = Math.max(64, Math.ceil(nodeUi.contentSize.height * 2));
+    const canvas = document.createElement('canvas');
+    canvas.width = widthPx;
+    canvas.height = heightPx;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
         return null;
     }
-    const local = _localPosRelativeTo(uiRoot, label.node);
+
+    const texture = new Texture2D();
+    texture.reset({ width: widthPx, height: heightPx });
+    texture.uploadData(canvas);
+
+    const renderer = addTexturedQuad(
+        panelRoot,
+        label.node.name,
+        texture,
+        layout.width,
+        layout.height,
+        { x: layout.cx, y: layout.cy },
+        Color.WHITE,
+        undefined,
+        zOffset,
+    );
+
     return {
-        cx: local.x * scale,
-        cy: local.y * scale,
-        height: ui.contentSize.height * scale,
+        renderer,
+        texture,
+        canvas,
+        ctx,
+        widthPx,
+        heightPx,
+        fontSize: Math.max(12, Math.round(label.fontSize * 2)),
+        bold: label.isBold,
+        textColor: label.color.clone(),
+        outlineColor: label.outlineColor.clone(),
+        outlineWidth: Math.max(0, Math.round(label.outlineWidth * 2)),
     };
 }
 
-function _buildAmountMesh(panelRoot: Node, anchor: AmountAnchor, text: string, zOffset: number): MeshRenderer {
-    const atlas = GroundDigitAtlas.shared;
-    const digitH = anchor.height;
-    const digitW = digitH * 0.55;
-    const spacing = digitW * 0.12;
-    const specs: GroundQuadSpec[] = [];
-
-    const groupW = text.length * digitW + Math.max(0, text.length - 1) * spacing;
-    let x = anchor.cx - groupW * 0.5 + digitW * 0.5;
-
-    for (const ch of text) {
-        specs.push({
-            cx: x,
-            cy: anchor.cy,
-            width: digitW,
-            height: digitH,
-            uv: atlas.getUv(ch),
-        });
-        x += digitW + spacing;
+function _layoutInRoot(
+    rootUi: UITransform | null,
+    node: Node,
+    nodeUi: UITransform,
+    scale: number,
+): { cx: number; cy: number; width: number; height: number } {
+    if (rootUi) {
+        nodeUi.convertToWorldSpaceAR(Vec3.ZERO, _tmpWorld);
+        rootUi.convertToNodeSpaceAR(_tmpWorld, _tmpLocal);
+    } else {
+        _tmpLocal.set(node.position);
     }
-
-    return addMergedTexturedQuads(panelRoot, 'Amount', specs, atlas.texture, Color.WHITE, zOffset);
+    return {
+        cx: _tmpLocal.x * scale,
+        cy: _tmpLocal.y * scale,
+        width: nodeUi.contentSize.width * scale,
+        height: nodeUi.contentSize.height * scale,
+    };
 }
 
-function _localPosRelativeTo(root: Node, node: Node): Vec3 {
-    const out = node.position.clone();
-    let parent = node.parent;
-    while (parent && parent !== root) {
-        out.x += parent.position.x;
-        out.y += parent.position.y;
-        out.z += parent.position.z;
-        parent = parent.parent;
+function _drawText(entry: TextMeshEntry, text: string): void {
+    const { ctx, canvas, widthPx, heightPx, fontSize, bold, textColor, outlineColor, outlineWidth, texture } = entry;
+    ctx.clearRect(0, 0, widthPx, heightPx);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${bold ? 'bold ' : ''}${fontSize}px Arial`;
+    ctx.lineJoin = 'round';
+    if (outlineWidth > 0) {
+        ctx.strokeStyle = `rgba(${outlineColor.r}, ${outlineColor.g}, ${outlineColor.b}, ${outlineColor.a / 255})`;
+        ctx.lineWidth = outlineWidth;
+        ctx.strokeText(text, widthPx * 0.5, heightPx * 0.5);
     }
-    return out;
+    ctx.fillStyle = `rgba(${textColor.r}, ${textColor.g}, ${textColor.b}, ${textColor.a / 255})`;
+    ctx.fillText(text, widthPx * 0.5, heightPx * 0.5);
+    texture.uploadData(canvas);
 }
 
 function _setRendererAlpha(renderer: MeshRenderer, alpha: number): void {

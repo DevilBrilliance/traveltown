@@ -4,8 +4,7 @@ import { BakedPurchaseUI, bakePurchaseUIPrefab } from './PurchaseZoneUIPrefabBak
 const { ccclass, property } = _decorator;
 
 /**
- * 购买区显示控制：预制体 Sprite 烘焙为贴地 Mesh，参与 3D 深度遮挡。
- * （预制体仅作布局与图源，运行时不再用 RenderRoot2D 渲染）
+ * 购买区显示控制：预制体 Sprite → 透明贴地 Mesh，Label 保留预制体样式。
  */
 @ccclass('PurchaseZoneUIView')
 export class PurchaseZoneUIView extends Component {
