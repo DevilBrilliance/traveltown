@@ -30,18 +30,12 @@
       },
       {
         "__id__": 3274
-      },
-      {
-        "__id__": 3276
-      },
-      {
-        "__id__": 3277
       }
     ],
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 3278
+      "__id__": 3276
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -72,7 +66,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 3279
+      "__id__": 3277
     },
     "_id": "57b4f1f1-8d76-4cea-8749-52f56b67df18"
   },
@@ -48985,6 +48979,16 @@
     "__prefab": null,
     "costType": 1,
     "costAmount": 50,
+    "displayName": "收银台",
+    "rewardIconPath": "",
+    "grantWorkerCount": 0,
+    "grantWorkerVariant": 0,
+    "workerSpawnPosition": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
     "unlockTarget": {
       "__id__": 1943
     },
@@ -50048,89 +50052,31 @@
       "z": 0
     },
     "protagonistPrefab": null,
+    "workerPurchasePosition": {
+      "__type__": "cc.Vec3",
+      "x": 6,
+      "y": 0,
+      "z": -4
+    },
+    "cashierPurchasePosition": {
+      "__type__": "cc.Vec3",
+      "x": 2,
+      "y": 0,
+      "z": -4
+    },
+    "workerSpawnPosition": {
+      "__type__": "cc.Vec3",
+      "x": 12,
+      "y": 0,
+      "z": -8
+    },
+    "cashierSpawnPosition": {
+      "__type__": "cc.Vec3",
+      "x": -3,
+      "y": 0,
+      "z": 5
+    },
     "_id": "ebUlpJ9XlIvpsHqoKtwUwY"
-  },
-  {
-    "__type__": "cc.Node",
-    "_name": "Node",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "_parent": {
-      "__id__": 1
-    },
-    "_children": [],
-    "_active": true,
-    "_components": [],
-    "_prefab": null,
-    "_lpos": {
-      "__type__": "cc.Vec3",
-      "x": -15,
-      "y": 0,
-      "z": -3
-    },
-    "_lrot": {
-      "__type__": "cc.Quat",
-      "x": 0,
-      "y": 0,
-      "z": 0,
-      "w": 1
-    },
-    "_lscale": {
-      "__type__": "cc.Vec3",
-      "x": 1,
-      "y": 1,
-      "z": 1
-    },
-    "_mobility": 0,
-    "_layer": 1073741824,
-    "_euler": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "_id": "96OH6WkhNNhrolaOE6FfC1"
-  },
-  {
-    "__type__": "cc.Node",
-    "_name": "Node",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "_parent": {
-      "__id__": 1
-    },
-    "_children": [],
-    "_active": true,
-    "_components": [],
-    "_prefab": null,
-    "_lpos": {
-      "__type__": "cc.Vec3",
-      "x": -15,
-      "y": 0,
-      "z": 3
-    },
-    "_lrot": {
-      "__type__": "cc.Quat",
-      "x": 0,
-      "y": 0,
-      "z": 0,
-      "w": 1
-    },
-    "_lscale": {
-      "__type__": "cc.Vec3",
-      "x": 1,
-      "y": 1,
-      "z": 1
-    },
-    "_mobility": 0,
-    "_layer": 1073741824,
-    "_euler": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "_id": "d0t9Ie8ehHSpGG4jnkPwF8"
   },
   {
     "__type__": "cc.PrefabInfo",
@@ -51141,28 +51087,28 @@
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 3280
+      "__id__": 3278
     },
     "shadows": {
-      "__id__": 3281
+      "__id__": 3279
     },
     "_skybox": {
-      "__id__": 3282
+      "__id__": 3280
     },
     "fog": {
-      "__id__": 3283
+      "__id__": 3281
     },
     "octree": {
-      "__id__": 3284
+      "__id__": 3282
     },
     "skin": {
-      "__id__": 3285
+      "__id__": 3283
     },
     "lightProbeInfo": {
-      "__id__": 3286
+      "__id__": 3284
     },
     "postSettings": {
-      "__id__": 3287
+      "__id__": 3285
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

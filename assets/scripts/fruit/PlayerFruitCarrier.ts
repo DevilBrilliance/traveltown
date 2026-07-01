@@ -148,6 +148,60 @@ export class PlayerFruitCarrier extends Component {
 
 
 
+    public get pineappleCount(): number {
+
+        let count = 0;
+
+        for (const type of this._carriedTypes) {
+
+            if (type === FruitType.Pineapple) {
+
+                count++;
+
+            }
+
+        }
+
+        return count;
+
+    }
+
+
+
+    /** 从背上移除一个菠萝（后进先出），成功返回 true */
+
+    public removeOnePineapple(): boolean {
+
+        for (let i = this._carriedTypes.length - 1; i >= 0; i--) {
+
+            if (this._carriedTypes[i] !== FruitType.Pineapple) {
+
+                continue;
+
+            }
+
+            this._carriedTypes.splice(i, 1);
+
+            const slot = this._stackSlots[i];
+
+            this._stackSlots.splice(i, 1);
+
+            slot?.destroy();
+
+            this._reindexStackPositions();
+
+            this.node.emit('fruit-carry-changed', this.carriedCount);
+
+            return true;
+
+        }
+
+        return false;
+
+    }
+
+
+
     onDestroy() {
 
         this._pendingHarvestSource = null;
@@ -300,6 +354,34 @@ export class PlayerFruitCarrier extends Component {
 
 
     /** 每帧同步后背挂点（玩家本地偏移，随转身自动转到背后） */
+
+    private _reindexStackPositions(): void {
+
+        for (let i = 0; i < this._stackSlots.length; i++) {
+
+            const slot = this._stackSlots[i];
+
+            if (!slot?.isValid) {
+
+                continue;
+
+            }
+
+            slot.setPosition(
+
+                this.stackLocalOffset.x * i,
+
+                this.stackLocalOffset.y * i,
+
+                this.stackLocalOffset.z * i,
+
+            );
+
+        }
+
+    }
+
+
 
     private _updateCarryMount(): void {
 

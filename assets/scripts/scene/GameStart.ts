@@ -32,6 +32,8 @@ import {
 import { WorkerRewardVariant } from '../reward/RewardType';
 import { FruitCollectFieldSetup } from '../fruit/FruitCollectFieldSetup';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
+import { JuiceMachine } from '../juice/JuiceMachine';
+import { JUICE_MACHINE_ZONE_POSITION, JuiceMachineSetup } from '../juice/JuiceMachineSetup';
 
 const { ccclass, property } = _decorator;
 
@@ -62,10 +64,14 @@ export class GameStart extends Component {
     @property({ tooltip: '服务员解锁后生成位置（收银台旁）' })
     cashierSpawnPosition = new Vec3(-3, 0, 5);
 
+    @property({ tooltip: '榨汁机投料区世界坐标（Y 会按底板顶面自动抬高）' })
+    juiceMachinePosition = new Vec3(26, 0, -10);
+
     private _protagonist: Node | null = null;
     private _customersSpawned = false;
     private _workerPurchaseZone: PurchaseZone | null = null;
     private _cashierPurchaseZone: PurchaseZone | null = null;
+    private _juiceMachine: JuiceMachine | null = null;
 
     onLoad() {
         this._ensureCurrencyWallet();
@@ -120,6 +126,7 @@ export class GameStart extends Component {
         }
 
         this._setupWorkerAndCashierZones(island);
+        this._juiceMachine = JuiceMachineSetup.ensureOnIsland(island, this.juiceMachinePosition);
 
         const counterZone = island.getChildByName('CounterPurchaseZone');
         counterZone?.on('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
@@ -173,6 +180,7 @@ export class GameStart extends Component {
             this._spawnCustomers();
         }
         this._workerPurchaseZone?.activate();
+        this._juiceMachine?.activate();
     }
 
     private _onWorkerUnlocked(): void {

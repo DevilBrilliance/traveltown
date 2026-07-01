@@ -56,16 +56,17 @@ export class PurchaseZoneView extends Component {
     /** 每层的 Z 偏移（局部 Z → 世界 Y，值越大离地越高，越靠近摄像机） */
     private static readonly LAYER_Z = 0.001;
 
-    public setup(uiRoot: Node, uiScale: Vec3): void {
+    public setup(uiRoot: Node, uiScale: Vec3, skipNodeNames: string[] = []): void {
         this.node.setRotationFromEuler(-90, 0, 0);
         this.node.setScale(uiScale);
         this.node.layer = Layers.Enum.DEFAULT;
 
+        const skip = new Set(skipNodeNames);
         let layer = 0;
 
         // ─── Sprite 节点 → MeshRenderer Quad ─────────────────────────────
         for (const sprite of uiRoot.getComponentsInChildren(Sprite)) {
-            if (!sprite.spriteFrame) {
+            if (skip.has(sprite.node.name) || !sprite.spriteFrame) {
                 continue;
             }
             const pos = this._accumPos(sprite.node, uiRoot);
