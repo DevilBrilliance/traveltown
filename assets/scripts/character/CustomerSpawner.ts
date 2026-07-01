@@ -2,8 +2,10 @@ import {
     _decorator,
     Component,
     director,
+    math,
     Node,
     Prefab,
+    Quat,
     Vec3,
 } from 'cc';
 import { AppearanceController } from './AppearanceController';
@@ -159,9 +161,17 @@ export class CustomerSpawner extends Component {
         throw new Error('[CustomerSpawner] 未找到 Island 或 start 节点');
     }
 
-    /** 绕 Y 轴朝向目标点（保持直立） */
+    /** 绕 Y 轴朝向目标点（与 PlayerMovementController 同一套朝向约定） */
     private _faceTarget(node: Node, target: Vec3): void {
         const pos = node.worldPosition;
-        node.lookAt(new Vec3(target.x, pos.y, target.z));
+        const dx = target.x - pos.x;
+        const dz = target.z - pos.z;
+        if (dx * dx + dz * dz < 1e-6) {
+            return;
+        }
+        const yaw = math.toDegree(Math.atan2(dx, dz));
+        const rot = new Quat();
+        Quat.fromEuler(rot, 0, yaw, 0);
+        node.setWorldRotation(rot);
     }
 }

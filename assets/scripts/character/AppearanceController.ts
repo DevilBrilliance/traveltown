@@ -34,6 +34,8 @@ type PropNodeKey = typeof PROP_NODE_NAMES[number];
  */
 @ccclass('AppearanceController')
 export class AppearanceController extends Component {
+    private static _pendingBootAppearance: CharacterAppearanceType | null = null;
+
     @property({ type: Node, tooltip: 'Geometry 节点，不填则自动查找' })
     geometryRoot: Node | null = null;
 
@@ -50,6 +52,7 @@ export class AppearanceController extends Component {
     private _duckVariant: 1 | 2 = 2;
     private _sickleVisible = false;
     private _initialized = false;
+    private _bootAppearance: CharacterAppearanceType | null = null;
 
     public get currentAppearance(): CharacterAppearanceType {
         return this._currentAppearance;
@@ -117,10 +120,12 @@ export class AppearanceController extends Component {
         onCreated?: (controller: AppearanceController, characterNode: Node) => void,
     ): void {
         const characterNode = instantiate(prefab);
-        parent.addChild(characterNode);
-
+        AppearanceController._pendingBootAppearance = appearance;
         const controller = characterNode.getComponent(AppearanceController)
             ?? characterNode.addComponent(AppearanceController);
+        controller.markBootAppearance(appearance);
+        AppearanceController._pendingBootAppearance = null;
+        parent.addChild(characterNode);
         controller.setAppearance(appearance);
 
         const animController = characterNode.getComponent(CharacterAnimController)
@@ -129,6 +134,11 @@ export class AppearanceController extends Component {
         animController.play(animController.defaultState);
 
         onCreated?.(controller, characterNode);
+    }
+
+    /** 在 addChild 前调用，避免 onLoad 先用 defaultAppearance 覆盖顾客形象 */
+    public markBootAppearance(appearance: CharacterAppearanceType): void {
+        this._bootAppearance = appearance;
     }
 
     /** 切换形象 */
@@ -222,7 +232,11 @@ export class AppearanceController extends Component {
         this._hideAllBodies();
         this._hideAllProps();
         this._initialized = true;
-        this.setAppearance(this.defaultAppearance);
+        const boot = this._bootAppearance
+            ?? AppearanceController._pendingBootAppearance
+            ?? this.defaultAppearance;
+        this._bootAppearance = null;
+        this.setAppearance(boot);
     }
 
     private _cacheNodes(): void {
@@ -249,18 +263,13 @@ export class AppearanceController extends Component {
     }
 
     private _cacheNan2DefaultTexture(): void {
-        const nan2 = this._bodyNodes.get('nan2');
-        if (!nan2 || nan2.children.length <= 1) {
-            return;
-        }
-
-        const renderer = this._getRenderer(nan2.children[1]);
+        const renderer = this._getNan2BodyRenderer();
         if (!renderer) {
             return;
         }
 
         const material = renderer.getMaterial(0);
-        this._nan2DefaultTexture = material?.getProperty('mainTexture') as Texture2D | null;
+        this._nan2DefaultTexture = this._readAlbedoTexture(material);
     }
 
     private _preloadCustomerTextures(): void {
@@ -339,59 +348,112 @@ export class AppearanceController extends Component {
         }
 
         const path = CUSTOMER_TEXTURE_PATHS[type];
-        const subPath = `${path}/texture`;
+        const uuid = CUSTOMER_TEXTURE_UUIDS[type];
 
-        resources.load(subPath, Texture2D, (err, texture) => {
-            if (!err && texture) {
-                this._customerTextures.set(type, texture);
-                onLoaded(texture);
+        assetManager.loadAny({ uuid, type: Texture2D }, (err, asset) => {
+            if (!err && asset) {
+                const loaded = asset as Texture2D;
+                this._customerTextures.set(type, loaded);
+                onLoaded(loaded);
                 return;
             }
 
-            resources.load(path, Texture2D, (err2, texture2) => {
-                if (!err2 && texture2) {
-                    this._customerTextures.set(type, texture2);
-                    onLoaded(texture2);
+            resources.load(`${path}/texture`, Texture2D, (err2, texture) => {
+                if (!err2 && texture) {
+                    this._customerTextures.set(type, texture);
+                    onLoaded(texture);
                     return;
                 }
 
-                assetManager.loadAny(
-                    { uuid: CUSTOMER_TEXTURE_UUIDS[type], type: Texture2D },
-                    (err3, asset) => {
-                        if (err3 || !asset) {
-                            console.warn(`[AppearanceController] 顾客贴图加载失败: ${path}`, err3 ?? err2 ?? err);
-                            return;
-                        }
-                        const loaded = asset as Texture2D;
-                        this._customerTextures.set(type, loaded);
-                        onLoaded(loaded);
-                    },
-                );
+                resources.load(path, Texture2D, (err3, texture2) => {
+                    if (!err3 && texture2) {
+                        this._customerTextures.set(type, texture2);
+                        onLoaded(texture2);
+                        return;
+                    }
+
+                    console.warn(
+                        `[AppearanceController] 顾客贴图加载失败: ${path}`,
+                        err3 ?? err2 ?? err,
+                    );
+                });
             });
         });
     }
 
-    /** 切换 nan2 子节点 1 的材质 BaseColorMap（mainTexture） */
+    /** 切换 nan2 身体网格的 BaseColorMap（mainTexture） */
     private _setNan2ChildTexture(texture: Texture2D): void {
-        const nan2 = this._bodyNodes.get('nan2');
-        if (!nan2 || nan2.children.length <= 1) {
-            console.warn('[AppearanceController] nan2 子节点 1 不存在，无法替换贴图');
-            return;
-        }
-
-        const renderer = this._getRenderer(nan2.children[1]);
+        const renderer = this._getNan2BodyRenderer();
         if (!renderer) {
-            console.warn('[AppearanceController] nan2 子节点 1 未找到 MeshRenderer');
+            console.warn('[AppearanceController] nan2 身体网格不存在，无法替换贴图');
             return;
         }
 
         const material = renderer.getMaterialInstance(0);
         if (!material) {
-            console.warn('[AppearanceController] nan2 子节点 1 材质获取失败');
+            console.warn('[AppearanceController] nan2 身体材质获取失败');
             return;
         }
 
-        material.setProperty('mainTexture', texture);
+        if (!this._writeAlbedoTexture(material, texture)) {
+            console.warn('[AppearanceController] nan2 材质未找到 albedo 贴图槽位');
+        }
+    }
+
+    /** nan2 下带 NAN2 材质的身体网格（优先子节点 1 / Boy01） */
+    private _getNan2BodyRenderer(): MeshRenderer | SkinnedMeshRenderer | null {
+        const nan2 = this._bodyNodes.get('nan2');
+        if (!nan2) {
+            return null;
+        }
+
+        if (nan2.children.length > 1) {
+            const preferred = this._getRenderer(nan2.children[1]);
+            if (preferred) {
+                return preferred;
+            }
+        }
+
+        const boy01 = this._findNodeByName(nan2, 'Boy01');
+        if (boy01) {
+            const renderer = this._getRenderer(boy01);
+            if (renderer) {
+                return renderer;
+            }
+        }
+
+        for (const child of nan2.children) {
+            const renderer = this._getRenderer(child);
+            if (renderer) {
+                return renderer;
+            }
+        }
+
+        return null;
+    }
+
+    private _readAlbedoTexture(material: NonNullable<ReturnType<MeshRenderer['getMaterial']>>): Texture2D | null {
+        for (const key of ['mainTexture', 'albedoMap', 'baseColorMap']) {
+            const value = material.getProperty(key);
+            if (value instanceof Texture2D) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private _writeAlbedoTexture(
+        material: NonNullable<ReturnType<MeshRenderer['getMaterialInstance']>>,
+        texture: Texture2D,
+    ): boolean {
+        for (const key of ['mainTexture', 'albedoMap', 'baseColorMap']) {
+            const current = material.getProperty(key);
+            if (current instanceof Texture2D || current == null) {
+                material.setProperty(key, texture);
+                return true;
+            }
+        }
+        return false;
     }
 
     private _getRenderer(node: Node): MeshRenderer | SkinnedMeshRenderer | null {
