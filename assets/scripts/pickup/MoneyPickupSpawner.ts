@@ -242,7 +242,7 @@ export class MoneyPickupSpawner extends Component {
     private _readWorldAabb(renderer: MeshRenderer, out: geometry.AABB): boolean {
         const model = renderer.model;
         if (model?.worldBounds) {
-            geometry.AABB.copy(out, model.worldBounds);
+            out.copy(model.worldBounds);
             return true;
         }
         return this._readAabbFromMeshStruct(renderer, out);
@@ -284,11 +284,12 @@ export class MoneyPickupSpawner extends Component {
             }
         }
 
-        geometry.AABB.set(
-            out,
+        out.center.set(
             (minX + maxX) * 0.5,
             (minY + maxY) * 0.5,
             (minZ + maxZ) * 0.5,
+        );
+        out.halfExtents.set(
             (maxX - minX) * 0.5,
             (maxY - minY) * 0.5,
             (maxZ - minZ) * 0.5,

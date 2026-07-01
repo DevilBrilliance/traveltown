@@ -89,7 +89,7 @@ export class IslandSurfaceSampler {
     private static _readWorldAabb(renderer: MeshRenderer, out: geometry.AABB): boolean {
         const model = renderer.model;
         if (model?.worldBounds) {
-            geometry.AABB.copy(out, model.worldBounds);
+            out.copy(model.worldBounds);
             return true;
         }
         return IslandSurfaceSampler._readAabbFromMeshStruct(renderer, out);
