@@ -43,6 +43,7 @@ export class PurchaseZoneView extends Component {
     private _amountTex: Texture2D | null = null;
     private _amountRenderer: MeshRenderer | null = null;
     private _amountString = '';
+    private _labelFontSize = 60;
 
     /** 每层的 Z 偏移（局部 Z → 世界 Y，值越大离地越高，越靠近摄像机） */
     private static readonly LAYER_Z = 0.001;
@@ -85,12 +86,14 @@ export class PurchaseZoneView extends Component {
         const label = uiRoot.getComponentInChildren(Label);
         if (label) {
             const pos = this._accumPos(label.node, uiRoot);
-            const tr = label.node.getComponent(UITransform);
-            const lw = (tr?.width ?? 80) * 2.5;  // 留出足够宽度
-            const lh = (tr?.height ?? 60) * 2.5;
+            const fs = label.fontSize;
+            // 显示尺寸基于字号，保证在世界空间里足够大
+            const lw = fs * 5;
+            const lh = fs * 2;
 
+            this._labelFontSize = fs;
             this._amountString = label.string;
-            this._amountTex = this._makeTextTex(label.string, label.fontSize, label.color, lw, lh);
+            this._amountTex = this._makeTextTex(label.string, fs, label.color);
             if (this._amountTex) {
                 this._amountRenderer = this._addPlainQuad(
                     'Amount',
@@ -115,7 +118,7 @@ export class PurchaseZoneView extends Component {
         const canvas = document.createElement('canvas');
         canvas.width = this._amountTex.width;
         canvas.height = this._amountTex.height;
-        this._paintText(canvas.getContext('2d')!, s, 60, Color.WHITE);
+        this._paintText(canvas.getContext('2d')!, s, this._labelFontSize * 2, Color.WHITE);
         this._amountTex.uploadData(canvas);
     }
 
@@ -260,15 +263,16 @@ export class PurchaseZoneView extends Component {
         return { u0: r.x / tw, v0, u1: (r.x + r.width) / tw, v1 };
     }
 
-    private _makeTextTex(text: string, fontSize: number, color: Color, w: number, h: number): Texture2D | null {
+    private _makeTextTex(text: string, fontSize: number, color: Color): Texture2D | null {
         try {
-            // canvas 分辨率：以字体大小为基准保证清晰度
-            const cw = Math.max(128, Math.ceil(fontSize * 4));
-            const ch = Math.max(64, Math.ceil(fontSize * 1.6));
+            // 2× 超采样：canvas 分辨率是显示尺寸的 2 倍，保证文字锐利
+            const renderFs = fontSize * 2;
+            const cw = Math.max(256, Math.ceil(renderFs * 5));
+            const ch = Math.max(128, Math.ceil(renderFs * 2));
             const canvas = document.createElement('canvas');
             canvas.width = cw;
             canvas.height = ch;
-            this._paintText(canvas.getContext('2d')!, text, fontSize, color);
+            this._paintText(canvas.getContext('2d')!, text, renderFs, color);
 
             const tex = new Texture2D();
             // reset + uploadData 是 Cocos Creator 3.x 最可靠的 canvas → GPU 路径
