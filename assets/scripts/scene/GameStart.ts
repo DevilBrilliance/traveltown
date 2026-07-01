@@ -6,6 +6,7 @@ import {
     Prefab,
     Vec3,
 } from 'cc';
+import { CurrencyType } from '../currency/CurrencyType';
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAppearanceType } from '../character/CharacterAppearanceType';
 import { PlayerMovementController } from '../character/PlayerMovementController';
@@ -37,10 +38,6 @@ export class GameStart extends Component {
 
     @property({ tooltip: '主角世界坐标生成位置' })
     spawnPosition = new Vec3(0, 0, 0);
-
-    //顾客出生位置
-    @property({ tooltip: '顾客世界坐标生成位置' })
-    customerSpawnPosition = new Vec3(-19, 0, 0);
 
     @property({ type: Prefab, tooltip: '可选：拖入 resources/characters/NPC_RIG，加载失败时用此引用' })
     protagonistPrefab: Prefab | null = null;
@@ -117,11 +114,24 @@ export class GameStart extends Component {
         if (!spawner) {
             spawner = this.node.addComponent(CustomerSpawner);
         }
-        spawner.center = this.customerSpawnPosition.clone();
-        spawner.radius = 2;
-        spawner.count = 3;
         spawner.npcPrefab = this.protagonistPrefab;
-        spawner.spawnCustomers();
+        spawner.lookAtTarget.set(0, 0, 0);
+        spawner.spawnFromConfigs([
+            {
+                position: new Vec3(-15, 0, 3),
+                appearance: CharacterAppearanceType.Customer0,
+                requirements: [{ type: CurrencyType.PineappleJuice, amount: 3 }],
+                subjectId: 'Customer_0',
+                displayName: '顾客',
+            },
+            {
+                position: new Vec3(-15, 0, -3),
+                appearance: CharacterAppearanceType.Customer1,
+                requirements: [{ type: CurrencyType.PineappleJuice, amount: 5 }],
+                subjectId: 'Customer_1',
+                displayName: '顾客',
+            },
+        ]);
     }
 
     private _spawnMoneyPickups(): void {

@@ -8,6 +8,11 @@ import {
     Quat,
     Vec3,
 } from 'cc';
+import { CurrencyCost } from '../currency/CurrencyType';
+import { OrderManager } from '../order/OrderManager';
+import { OrderRequirementItem } from '../order/OrderRequirement';
+import { OrderSubject } from '../order/OrderSubject';
+import { OrderSubjectType } from '../order/OrderSubjectType';
 import { AppearanceController } from './AppearanceController';
 import { CharacterAppearanceType } from './CharacterAppearanceType';
 import { CharacterAnimState } from './CharacterAnimState';
@@ -19,6 +24,15 @@ const CUSTOMER_TYPES = [
     CharacterAppearanceType.Customer0,
     CharacterAppearanceType.Customer1,
 ] as const;
+
+/** 单个顾客的生成与订单配置 */
+export interface CustomerSpawnConfig {
+    position: Vec3;
+    appearance?: CharacterAppearanceType;
+    requirements: CurrencyCost[];
+    subjectId?: string;
+    displayName?: string;
+}
 
 /** 在圆内均匀随机一点（XZ 平面） */
 function samplePointInCircle(center: Vec3, radius: number, out: Vec3): Vec3 {
@@ -80,24 +94,40 @@ export class CustomerSpawner extends Component {
 
     /** 生成顾客（重复调用会先清理旧顾客） */
     public spawnCustomers(): void {
-        this.clearCustomers();
+        if (this.count <= 0) {
+            return;
+        }
+        const configs: CustomerSpawnConfig[] = [];
+        for (let i = 0; i < this.count; i += 1) {
+            configs.push({
+                position: samplePointInCircle(this.center, this.radius, new Vec3()),
+                requirements: [],
+            });
+        }
+        this.spawnFromConfigs(configs);
+    }
 
-        const parent = this._resolveParent();
-        let pending = this.count;
-        if (pending <= 0) {
+    /** 按固定点位生成顾客并绑定订单（显示头顶气泡） */
+    public spawnFromConfigs(configs: CustomerSpawnConfig[]): void {
+        this.clearCustomers();
+        if (configs.length === 0) {
             return;
         }
 
-        for (let i = 0; i < this.count; i += 1) {
-            const appearance = pickRandomCustomerAppearance();
-            const pos = samplePointInCircle(this.center, this.radius, new Vec3());
+        const parent = this._resolveParent();
+        let pending = configs.length;
+
+        for (let i = 0; i < configs.length; i += 1) {
+            const config = configs[i];
+            const appearance = config.appearance ?? pickRandomCustomerAppearance();
+            const pos = config.position.clone();
             const index = i;
 
             AppearanceController.create(
                 parent,
                 appearance,
                 (controller, characterNode) => {
-                    characterNode.name = `Customer_${index}`;
+                    characterNode.name = config.subjectId || `Customer_${index}`;
                     characterNode.setWorldPosition(pos);
                     this._faceTarget(characterNode, this.lookAtTarget);
 
@@ -109,6 +139,10 @@ export class CustomerSpawner extends Component {
                         ?? characterNode.addComponent(CharacterAnimController);
                     anim.defaultState = CharacterAnimState.CustomerIdle;
                     anim.play(CharacterAnimState.CustomerIdle);
+
+                    if (config.requirements.length > 0) {
+                        this._bindOrder(characterNode, config, index);
+                    }
 
                     this._customers.push(characterNode);
                     pending -= 1;
@@ -137,6 +171,21 @@ export class CustomerSpawner extends Component {
 
     public get hasSpawned(): boolean {
         return this._spawned;
+    }
+
+    private _bindOrder(customerNode: Node, config: CustomerSpawnConfig, index: number): void {
+        const subject = customerNode.addComponent(OrderSubject);
+        subject.subjectId = config.subjectId || `Customer_${index}`;
+        subject.subjectType = OrderSubjectType.Customer;
+        subject.displayName = config.displayName || '顾客';
+        subject.registerOnLoad = false;
+        subject.requirements = config.requirements.map((req) => {
+            const item = new OrderRequirementItem();
+            item.goodsType = req.type;
+            item.amount = req.amount;
+            return item;
+        });
+        OrderManager.ensure().registerSubject(subject);
     }
 
     private _resolveParent(): Node {
