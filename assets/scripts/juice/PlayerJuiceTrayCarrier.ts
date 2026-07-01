@@ -75,16 +75,16 @@ export class PlayerJuiceTrayCarrier extends Component {
     @property({ tooltip: '托盘上果汁杯本地缩放' })
     glassLocalScale = 2;
 
-    @property({ tooltip: '托盘格子首角（本地坐标）' })
+    @property({ tooltip: '托盘格子首角（本地坐标，覆盖整盘可摆放区域）' })
     trayGridStart = new Vec3(-16, -1.5, 11.5);
 
-    @property({ tooltip: '托盘格子末角（本地坐标）' })
+    @property({ tooltip: '托盘格子末角（本地坐标，覆盖整盘可摆放区域）' })
     trayGridEnd = new Vec3(-21.11, -1.5, 15);
 
-    @property({ tooltip: '托盘 X 方向列数' })
-    trayColsX = 6;
+    @property({ tooltip: '手持托盘 X 方向列数（3×4=12，勿与场景架 6×4=24 混用）' })
+    trayColsX = 3;
 
-    @property({ tooltip: '托盘 Z 方向行数（先 Z 后 X）' })
+    @property({ tooltip: '手持托盘 Z 方向行数（先 Z 后 X）' })
     trayRowsZ = 4;
 
     @property({ type: Node, tooltip: '收银台节点（SYJ），不填则自动查找' })
@@ -620,10 +620,12 @@ export class PlayerJuiceTrayCarrier extends Component {
     }
 
     private _computeTrayGlassLocal(index: number, out: Vec3): void {
-        const col = Math.floor(index / this.trayRowsZ);
-        const row = index % this.trayRowsZ;
-        const colT = this.trayColsX > 1 ? col / (this.trayColsX - 1) : 0;
-        const rowT = this.trayRowsZ > 1 ? row / (this.trayRowsZ - 1) : 0;
+        const cols = this.trayColsX;
+        const rows = this.trayRowsZ;
+        const col = Math.floor(index / rows);
+        const row = index % rows;
+        const colT = cols > 1 ? col / (cols - 1) : 0;
+        const rowT = rows > 1 ? row / (rows - 1) : 0;
 
         out.x = this.trayGridStart.x + (this.trayGridEnd.x - this.trayGridStart.x) * colT;
         out.y = this.trayGridStart.y + (this.trayGridEnd.y - this.trayGridStart.y) * rowT;
