@@ -27,6 +27,7 @@ import { FruitCollectZone } from './FruitCollectZone';
 import { FruitSource } from './FruitSource';
 
 import { FruitType } from './FruitType';
+import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 
 
 
@@ -263,6 +264,10 @@ export class PlayerFruitCarrier extends Component {
             return;
         }
 
+        if (this._isJuiceTrayBlockingPineappleHarvest()) {
+            return;
+        }
+
         this._startPineappleHarvest(source);
 
     }
@@ -491,6 +496,12 @@ export class PlayerFruitCarrier extends Component {
         }
     }
 
+    /** 端托盘取果汁期间禁止收割菠萝 */
+    private _isJuiceTrayBlockingPineappleHarvest(): boolean {
+        const tray = this.node.getComponent(PlayerJuiceTrayCarrier);
+        return tray?.isTrayActive ?? false;
+    }
+
 
 
     private _startPineappleHarvest(source: FruitSource): void {
@@ -499,6 +510,10 @@ export class PlayerFruitCarrier extends Component {
 
             return;
 
+        }
+
+        if (this._isJuiceTrayBlockingPineappleHarvest()) {
+            return;
         }
 
         this._isHarvesting = true;

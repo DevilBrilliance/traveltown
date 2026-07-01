@@ -10,6 +10,7 @@ import {
     Node,
     Vec3,
 } from 'cc';
+import { JuiceRackBounds } from '../juice/JuiceRackBounds';
 
 const { ccclass, property } = _decorator;
 
@@ -48,6 +49,9 @@ export class PlayAreaBoundary extends Component {
 
     @property({ tooltip: '是否扫描 Island 下所有名称含 ZhaLan 的节点' })
     scanZhaLanNodes = true;
+
+    @property({ type: [String], tooltip: '额外栅栏碰撞节点名（Island 下深度查找，含榨汁机）' })
+    extraFenceNodeNames: string[] = ['JiQi', 'JiQi_RIG'];
 
     @property({ tooltip: '玩家碰撞半径' })
     playerRadius = 0.45;
@@ -104,16 +108,10 @@ export class PlayAreaBoundary extends Component {
             if (!this._readWorldAabb(renderer, this._tmpAabb)) {
                 continue;
             }
-            const pad = this.fencePadding;
-            this._fenceAabbs.push({
-                center: this._tmpAabb.center.clone(),
-                halfExtents: new Vec3(
-                    this._tmpAabb.halfExtents.x + pad,
-                    this._tmpAabb.halfExtents.y + pad,
-                    this._tmpAabb.halfExtents.z + pad,
-                ),
-            });
+            this._pushFenceAabb(this._tmpAabb);
         }
+
+        this._collectExtraFenceNodes(island);
 
         this._collectSceneOccluders(island);
 
@@ -238,6 +236,31 @@ export class PlayAreaBoundary extends Component {
             }
         }
         return tmax >= 0 && tmin <= maxDist;
+    }
+
+    private _collectExtraFenceNodes(island: Node): void {
+        for (const name of this.extraFenceNodeNames) {
+            const node = island.getChildByName(name) ?? this._findChildByName(island, name);
+            if (!node?.isValid) {
+                continue;
+            }
+            if (!JuiceRackBounds.readNodeWorldAabb(node, this._tmpAabb, true)) {
+                continue;
+            }
+            this._pushFenceAabb(this._tmpAabb);
+        }
+    }
+
+    private _pushFenceAabb(aabb: geometry.AABB): void {
+        const pad = this.fencePadding;
+        this._fenceAabbs.push({
+            center: aabb.center.clone(),
+            halfExtents: new Vec3(
+                aabb.halfExtents.x + pad,
+                aabb.halfExtents.y + pad,
+                aabb.halfExtents.z + pad,
+            ),
+        });
     }
 
     private _collectSceneOccluders(island: Node): void {

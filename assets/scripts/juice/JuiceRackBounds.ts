@@ -1,4 +1,4 @@
-import { geometry, Mat4, Mesh, MeshRenderer, Node, Vec3 } from 'cc';
+import { geometry, Mat4, Mesh, MeshRenderer, Node, SkinnedMeshRenderer, Vec3 } from 'cc';
 
 /**
  * 读取节点下 Mesh 的世界 AABB，并做 XZ 平面拾取范围判定。
@@ -9,9 +9,12 @@ export class JuiceRackBounds {
     private static readonly _worldCorner = new Vec3();
     private static readonly _tmpAabb = new geometry.AABB();
 
-    /** 合并节点下所有 MeshRenderer 的世界包围盒 */
-    public static readNodeWorldAabb(node: Node, out: geometry.AABB): boolean {
-        const renderers = node.getComponentsInChildren(MeshRenderer);
+    /** 合并节点下所有 Mesh / SkinnedMesh 的世界包围盒 */
+    public static readNodeWorldAabb(
+        node: Node,
+        out: geometry.AABB,
+        includeInactive = false,
+    ): boolean {
         let minX = Infinity;
         let minY = Infinity;
         let minZ = Infinity;
@@ -20,14 +23,8 @@ export class JuiceRackBounds {
         let maxZ = -Infinity;
         let found = false;
 
-        for (const renderer of renderers) {
-            if (!renderer.node.activeInHierarchy) {
-                continue;
-            }
-            if (!JuiceRackBounds._readRendererAabb(renderer, JuiceRackBounds._tmpAabb)) {
-                continue;
-            }
-            const { center, halfExtents } = JuiceRackBounds._tmpAabb;
+        const merge = (aabb: geometry.AABB): void => {
+            const { center, halfExtents } = aabb;
             minX = Math.min(minX, center.x - halfExtents.x);
             maxX = Math.max(maxX, center.x + halfExtents.x);
             minY = Math.min(minY, center.y - halfExtents.y);
@@ -35,13 +32,31 @@ export class JuiceRackBounds {
             minZ = Math.min(minZ, center.z - halfExtents.z);
             maxZ = Math.max(maxZ, center.z + halfExtents.z);
             found = true;
+        };
+
+        for (const renderer of node.getComponentsInChildren(MeshRenderer)) {
+            if (!includeInactive && !renderer.node.activeInHierarchy) {
+                continue;
+            }
+            if (JuiceRackBounds._readRendererAabb(renderer, JuiceRackBounds._tmpAabb)) {
+                merge(JuiceRackBounds._tmpAabb);
+            }
+        }
+
+        for (const renderer of node.getComponentsInChildren(SkinnedMeshRenderer)) {
+            if (!includeInactive && !renderer.node.activeInHierarchy) {
+                continue;
+            }
+            if (JuiceRackBounds._readSkinnedRendererAabb(renderer, JuiceRackBounds._tmpAabb)) {
+                merge(JuiceRackBounds._tmpAabb);
+            }
         }
 
         if (!found) {
             return false;
         }
 
-        geometry.AABB.set(
+        JuiceRackBounds._writeAabb(
             out,
             (minX + maxX) * 0.5,
             (minY + maxY) * 0.5,
@@ -51,6 +66,28 @@ export class JuiceRackBounds {
             (maxZ - minZ) * 0.5,
         );
         return true;
+    }
+
+    /** 玩家 XZ 是否在节点 AABB 外扩 margin 内；无 Mesh 时退回节点世界坐标圆形范围 */
+    public static isPointNearNode(
+        node: Node,
+        x: number,
+        z: number,
+        margin: number,
+        includeInactive = false,
+    ): boolean {
+        if (JuiceRackBounds.readNodeWorldAabb(node, JuiceRackBounds._tmpAabb, includeInactive)) {
+            return JuiceRackBounds.isPointInsideXZExpanded(
+                JuiceRackBounds._tmpAabb,
+                x,
+                z,
+                margin,
+            );
+        }
+        const wp = node.worldPosition;
+        const dx = x - wp.x;
+        const dz = z - wp.z;
+        return dx * dx + dz * dz <= margin * margin;
     }
 
     /** 玩家 XZ 是否在 AABB 外扩 margin 的范围内（前后左右各扩 margin） */
@@ -66,13 +103,25 @@ export class JuiceRackBounds {
     private static _readRendererAabb(renderer: MeshRenderer, out: geometry.AABB): boolean {
         const model = renderer.model;
         if (model?.worldBounds) {
-            geometry.AABB.copy(out, model.worldBounds);
+            out.copy(model.worldBounds);
             return true;
         }
         return JuiceRackBounds._readAabbFromMeshStruct(renderer, out);
     }
 
-    private static _readAabbFromMeshStruct(renderer: MeshRenderer, out: geometry.AABB): boolean {
+    private static _readSkinnedRendererAabb(renderer: SkinnedMeshRenderer, out: geometry.AABB): boolean {
+        const model = renderer.model;
+        if (model?.worldBounds) {
+            out.copy(model.worldBounds);
+            return true;
+        }
+        return JuiceRackBounds._readAabbFromMeshStruct(renderer, out);
+    }
+
+    private static _readAabbFromMeshStruct(
+        renderer: MeshRenderer | SkinnedMeshRenderer,
+        out: geometry.AABB,
+    ): boolean {
         const mesh = renderer.mesh as Mesh | null;
         const min = mesh?.struct?.minPosition;
         const max = mesh?.struct?.maxPosition;
@@ -112,7 +161,7 @@ export class JuiceRackBounds {
             }
         }
 
-        geometry.AABB.set(
+        JuiceRackBounds._writeAabb(
             out,
             (minX + maxX) * 0.5,
             (minY + maxY) * 0.5,
@@ -122,5 +171,18 @@ export class JuiceRackBounds {
             (maxZ - minZ) * 0.5,
         );
         return true;
+    }
+
+    private static _writeAabb(
+        out: geometry.AABB,
+        cx: number,
+        cy: number,
+        cz: number,
+        hx: number,
+        hy: number,
+        hz: number,
+    ): void {
+        out.center.set(cx, cy, cz);
+        out.halfExtents.set(hx, hy, hz);
     }
 }

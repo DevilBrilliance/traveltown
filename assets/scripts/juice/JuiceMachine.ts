@@ -19,6 +19,7 @@ import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import { PurchaseZoneView } from '../purchase/PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from '../purchase/PurchaseZonePaths';
 import { JuiceMachineAnimator } from './JuiceMachineAnimator';
+import { JuiceRackBounds } from './JuiceRackBounds';
 import {
     JUICE_GLASS_PREFAB_UUID,
     JUICE_MACHINE_PINEAPPLE_ICON_PATH,
@@ -65,8 +66,11 @@ export class JuiceMachine extends Component {
     @property({ tooltip: 'UI 像素 → 世界单位缩放' })
     uiScale = new Vec3(0.006, 0.006, 0.006);
 
-    @property({ tooltip: '玩家进入该半径（XZ）时投菠萝' })
-    triggerRadius = 1.6;
+    @property({ tooltip: '投料区（JuiceMachineZone）AABB 外扩距离' })
+    zoneTriggerMargin = 2.5;
+
+    @property({ tooltip: '机器模型（JiQi）AABB 外扩距离' })
+    machineTriggerMargin = 1;
 
     @property({ tooltip: '投料速度（个/秒）' })
     depositPerSecond = 8;
@@ -401,10 +405,20 @@ export class JuiceMachine extends Component {
 
     private _isPlayerInRange(player: Node): boolean {
         const pp = player.worldPosition;
-        const zp = this.node.worldPosition;
-        const dx = pp.x - zp.x;
-        const dz = pp.z - zp.z;
-        return dx * dx + dz * dz <= this.triggerRadius * this.triggerRadius;
+        if (JuiceRackBounds.isPointNearNode(this.node, pp.x, pp.z, this.zoneTriggerMargin)) {
+            return true;
+        }
+        const ref = this.machineRef;
+        if (ref?.isValid) {
+            return JuiceRackBounds.isPointNearNode(
+                ref,
+                pp.x,
+                pp.z,
+                this.machineTriggerMargin,
+                true,
+            );
+        }
+        return false;
     }
 
     private _resolvePlayer(): Node | null {
