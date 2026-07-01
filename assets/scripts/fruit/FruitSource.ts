@@ -1,4 +1,4 @@
-import { _decorator, Component, Enum, instantiate, MeshRenderer, Node } from 'cc';
+import { _decorator, Component, Enum, instantiate, MeshRenderer, Node, Vec3 } from 'cc';
 import { findCharacterBone } from '../character/CharacterSocketHelper';
 import { FruitCollectZone } from './FruitCollectZone';
 import { FruitType } from './FruitType';
@@ -21,6 +21,24 @@ export class FruitSource extends Component {
 
     public get isAvailable(): boolean {
         return !this._collected && this.node.activeInHierarchy;
+    }
+
+    /** 采集判定用的世界坐标（优先 Boluo 果实位置） */
+    public getCollectWorldPosition(out: Vec3): Vec3 {
+        const boluo = findCharacterBone(this.node, 'Boluo')
+            ?? this._findBoluoNode(this.node);
+        if (boluo?.isValid) {
+            boluo.getWorldPosition(out);
+            return out;
+        }
+
+        this.node.getWorldPosition(out);
+        const renderer = this.node.getComponentInChildren(MeshRenderer);
+        const bounds = renderer?.model?.worldBounds;
+        if (bounds) {
+            out.set(bounds.center.x, bounds.center.y, bounds.center.z);
+        }
+        return out;
     }
 
     onLoad() {
@@ -80,5 +98,18 @@ export class FruitSource extends Component {
         if (this._renderers.length === 0) {
             this._renderers = this.node.getComponentsInChildren(MeshRenderer);
         }
+    }
+
+    private _findBoluoNode(root: Node): Node | null {
+        if (/^boluo$/i.test(root.name)) {
+            return root;
+        }
+        for (const child of root.children) {
+            const found = this._findBoluoNode(child);
+            if (found) {
+                return found;
+            }
+        }
+        return null;
     }
 }

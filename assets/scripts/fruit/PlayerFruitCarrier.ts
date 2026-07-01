@@ -99,10 +99,10 @@ export class PlayerFruitCarrier extends Component {
 
 
     @property({ tooltip: '水果中心微调' })
-
     fruitPivotOffset = new Vec3(0, 0, 0);
 
-
+    @property({ tooltip: '面前方向点积阈值（越大越严格，只采正前方）' })
+    frontCollectDot = 0.35;
 
     private readonly _tmpCenter = new Vec3();
 
@@ -119,6 +119,8 @@ export class PlayerFruitCarrier extends Component {
     private _pendingHarvestSource: FruitSource | null = null;
 
     private readonly _worldPos = new Vec3();
+    private readonly _fruitPos = new Vec3();
+    private readonly _forward = new Vec3();
 
 
 
@@ -192,15 +194,12 @@ export class PlayerFruitCarrier extends Component {
 
         }
 
-        if (source.fruitType === FruitType.Pineapple) {
-
-            this._startPineappleHarvest(source);
-
+        if (source.fruitType === FruitType.Orange) {
+            this._collect(source);
             return;
-
         }
 
-        this._collect(source);
+        this._startPineappleHarvest(source);
 
     }
 
@@ -324,44 +323,70 @@ export class PlayerFruitCarrier extends Component {
 
 
 
-    private _findNearestCollectible(playerWorldPos: Vec3): FruitSource | null {
+    private _findNearestCollectible(
+        playerWorldPos: Vec3,
+        filterType?: FruitType,
+        preferFront = true,
+    ): FruitSource | null {
+        const radiusSq = this.collectRadius * this.collectRadius;
+        let bestFront: FruitSource | null = null;
+        let bestFrontDistSq = radiusSq + 1;
+        let bestAny: FruitSource | null = null;
+        let bestAnyDistSq = radiusSq + 1;
 
-        let best: FruitSource | null = null;
-
-        let bestDistSq = this.collectRadius * this.collectRadius;
-
-
-
-        for (const zone of FruitCollectZone.all) {
-
-            const source = zone.findNearestAvailable(playerWorldPos, this.collectRadius);
-
-            if (!source) {
-
-                continue;
-
-            }
-
-            source.node.getWorldPosition(this._worldPos);
-
-            const dx = playerWorldPos.x - this._worldPos.x;
-
-            const dz = playerWorldPos.z - this._worldPos.z;
-
-            const distSq = dx * dx + dz * dz;
-
-            if (distSq <= bestDistSq) {
-
-                bestDistSq = distSq;
-
-                best = source;
-
-            }
-
+        if (preferFront) {
+            this._getPlayerForwardXZ(this._forward);
         }
 
-        return best;
+        for (const zone of FruitCollectZone.all) {
+            if (filterType !== undefined && zone.fruitType !== filterType) {
+                continue;
+            }
+            for (const source of zone.sources) {
+                if (!source.isAvailable) {
+                    continue;
+                }
+                source.getCollectWorldPosition(this._fruitPos);
+                const dx = playerWorldPos.x - this._fruitPos.x;
+                const dz = playerWorldPos.z - this._fruitPos.z;
+                const distSq = dx * dx + dz * dz;
+                if (distSq > radiusSq) {
+                    continue;
+                }
 
+                if (distSq < bestAnyDistSq) {
+                    bestAnyDistSq = distSq;
+                    bestAny = source;
+                }
+
+                if (!preferFront) {
+                    continue;
+                }
+
+                const toX = this._fruitPos.x - playerWorldPos.x;
+                const toZ = this._fruitPos.z - playerWorldPos.z;
+                const toLen = Math.hypot(toX, toZ);
+                const dot = toLen > 1e-4
+                    ? (this._forward.x * toX + this._forward.z * toZ) / toLen
+                    : 1;
+                if (dot >= this.frontCollectDot && distSq < bestFrontDistSq) {
+                    bestFrontDistSq = distSq;
+                    bestFront = source;
+                }
+            }
+        }
+
+        return bestFront ?? bestAny;
+    }
+
+    private _getPlayerForwardXZ(out: Vec3): void {
+        Vec3.copy(out, this.node.forward);
+        out.y = 0;
+        if (out.lengthSqr() < 1e-6) {
+            out.set(0, 0, 1);
+        } else {
+            out.normalize();
+        }
     }
 
 
@@ -403,29 +428,25 @@ export class PlayerFruitCarrier extends Component {
 
 
     private _finishPineappleHarvest(): void {
-
-        const source = this._pendingHarvestSource;
-
-        this._pendingHarvestSource = null;
-
         this._isHarvesting = false;
 
         if (!this.node?.isValid) {
-
+            this._pendingHarvestSource = null;
             return;
-
         }
 
         this.node.getComponent(AppearanceController)?.disableSickle();
 
+        this.node.getWorldPosition(this._worldPos);
+        const source = this._findNearestCollectible(this._worldPos, FruitType.Pineapple, true)
+            ?? this._pendingHarvestSource;
+        this._pendingHarvestSource = null;
+
         if (source?.isAvailable) {
-
             this._collect(source);
-
         }
 
         this.node.emit('fruit-collect-anim-finished');
-
     }
 
 

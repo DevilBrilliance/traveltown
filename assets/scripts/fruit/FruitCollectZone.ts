@@ -85,7 +85,7 @@ export class FruitCollectZone extends Component {
             if (!source.isAvailable) {
                 continue;
             }
-            source.node.getWorldPosition(this._tmpFruit);
+            source.getCollectWorldPosition(this._tmpFruit);
             dx = playerWorldPos.x - this._tmpFruit.x;
             dz = playerWorldPos.z - this._tmpFruit.z;
             if (dx * dx + dz * dz <= zoneRSq) {
@@ -106,11 +106,11 @@ export class FruitCollectZone extends Component {
             if (!source.isAvailable) {
                 continue;
             }
-            source.node.getWorldPosition(this._tmpFruit);
+            source.getCollectWorldPosition(this._tmpFruit);
             const dx = playerWorldPos.x - this._tmpFruit.x;
             const dz = playerWorldPos.z - this._tmpFruit.z;
             const distSq = dx * dx + dz * dz;
-            if (distSq <= bestDistSq) {
+            if (distSq < bestDistSq) {
                 bestDistSq = distSq;
                 best = source;
             }
@@ -128,7 +128,7 @@ export class FruitCollectZone extends Component {
             if (!source.isAvailable) {
                 continue;
             }
-            source.node.getWorldPosition(this._tmpFruit);
+            source.getCollectWorldPosition(this._tmpFruit);
             const dx = playerWorldPos.x - this._tmpFruit.x;
             const dz = playerWorldPos.z - this._tmpFruit.z;
             const distSq = dx * dx + dz * dz;
