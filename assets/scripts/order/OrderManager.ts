@@ -7,7 +7,7 @@ import {
 import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { CurrencyCost, CURRENCY_LABELS, CurrencyType } from '../currency/CurrencyType';
 import { OrderRequirementItem, toCurrencyCosts } from './OrderRequirement';
-import { rollCustomerJuiceRequirement } from './CustomerOrderHelper';
+import { rollCustomerJuiceRequirement, CUSTOMER_ORDER_RENEW_DELAY_SEC } from './CustomerOrderHelper';
 import { OrderInfo, OrderListener, OrderStatus } from './OrderTypes';
 import { ORDER_SUBJECT_LABELS, OrderSubjectType } from './OrderSubjectType';
 import { OrderSubject } from './OrderSubject';
@@ -41,6 +41,7 @@ export class OrderManager extends Component {
     private readonly _fulfilledListeners = new Set<OrderListener>();
     private readonly _ordersChangedListeners = new Set<() => void>();
     private readonly _registeredSubjects = new Map<string, OrderSubject>();
+    private _customerRenewPending = false;
 
     onLoad() {
         if (OrderManager._instance && OrderManager._instance !== this) {
@@ -52,6 +53,7 @@ export class OrderManager extends Component {
     }
 
     onDestroy() {
+        this.unschedule(this._renewAllCustomerOrders);
         if (OrderManager._instance === this) {
             OrderManager._instance = null;
         }
@@ -176,12 +178,52 @@ export class OrderManager extends Component {
 
         const subject = this._registeredSubjects.get(subjectId);
         if (order.subjectType === OrderSubjectType.Customer && subject?.isValid) {
-            this._renewCustomerOrder(order, subject);
+            if (this._areAllCustomerOrdersFulfilled()) {
+                this._scheduleCustomerOrdersRenewal();
+            }
         }
 
         this._notifyOrdersChanged();
         return true;
     }
+
+    private _areAllCustomerOrdersFulfilled(): boolean {
+        let customerCount = 0;
+        for (const subject of this._registeredSubjects.values()) {
+            if (subject.subjectType !== OrderSubjectType.Customer) {
+                continue;
+            }
+            customerCount += 1;
+            const order = this.getOrderBySubjectId(subject.getSubjectId());
+            if (!order || order.status === OrderStatus.Pending) {
+                return false;
+            }
+        }
+        return customerCount > 0;
+    }
+
+    private _scheduleCustomerOrdersRenewal(): void {
+        if (this._customerRenewPending) {
+            return;
+        }
+        this._customerRenewPending = true;
+        this.scheduleOnce(this._renewAllCustomerOrders, CUSTOMER_ORDER_RENEW_DELAY_SEC);
+    }
+
+    private _renewAllCustomerOrders = (): void => {
+        this._customerRenewPending = false;
+        for (const subject of this._registeredSubjects.values()) {
+            if (subject.subjectType !== OrderSubjectType.Customer || !subject.isValid) {
+                continue;
+            }
+            const order = this.getOrderBySubjectId(subject.getSubjectId());
+            if (!order) {
+                continue;
+            }
+            this._renewCustomerOrder(order, subject);
+        }
+        this._notifyOrdersChanged();
+    };
 
     /** 顾客订单完成后随机生成 2~5 杯菠萝汁的新需求 */
     private _renewCustomerOrder(order: OrderInfo, subject: OrderSubject): void {

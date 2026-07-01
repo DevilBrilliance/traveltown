@@ -52,7 +52,7 @@ export class PlayerJuiceTrayCarrier extends Component {
     trayPrefabRef: Prefab | null = null;
 
     @property({ tooltip: '大托盘 AABB 前后左右外扩距离（世界单位）' })
-    pickupMargin = 1;
+    pickupMargin = 2;
 
     @property({ tooltip: '玩家最多端走的果汁杯数' })
     maxCarryCount = 12;
