@@ -1,172 +1,294 @@
 import {
     _decorator,
-    Camera,
     Color,
     Component,
-    director,
+    gfx,
+    ImageAsset,
     Label,
     Layers,
+    Material,
+    MeshRenderer,
     Node,
-    RenderRoot2D,
-    UIRenderer,
+    Sprite,
+    SpriteFrame,
+    Texture2D,
+    UITransform,
+    utils,
     Vec3,
 } from 'cc';
-import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 
 const { ccclass, property } = _decorator;
 
 /**
- * 购买区世界 UI — 最简版本
+ * 购买区世界 UI — MeshRenderer 深度正确版
  *
- * 渲染：RenderRoot2D（完全保留预制体样式）
- * 遮挡：每帧对摄像机→UI 中心做 ray-AABB 检测，
- *       中间有栅栏则整个 UI 隐藏，没有则显示。
+ * 关键参数说明
+ * -----------
+ * depthTest: true  → 被玩家、栅栏等所有 3D 物体正确遮挡
+ * depthWrite: false → 透明区域不写深度值，不会在换角度时破坏其他物体显示
+ * 层级 Z 偏移      → 在 this.node 局部空间沿 Z 轴分层
+ *                    经 -90°X 旋转后 Z 映射为世界 Y（离地高度），排序稳定
+ *
+ * 纹理来源
+ * -------
+ * Sprite 节点：直接引用已加载的 SpriteFrame.texture（不复制像素，零开销）
+ * Label 节点：canvas2d 按同款字体设置绘制后上传
  */
 @ccclass('PurchaseZoneView')
 export class PurchaseZoneView extends Component {
     @property({ tooltip: '余额不足时 UI 变暗' })
     dimWhenUnaffordable = true;
 
-    private _uiRoot: Node | null = null;
-    private _amountLabel: Label | null = null;
-    private _affordable = true;
-    private _camNode: Node | null = null;
+    private _quads: Array<{ renderer: MeshRenderer; mat: Material }> = [];
+    private _filledRenderer: MeshRenderer | null = null;
+    private _amountTex: Texture2D | null = null;
+    private _amountRenderer: MeshRenderer | null = null;
+    private _amountString = '';
+
+    /** 每层的 Z 偏移（局部 Z → 世界 Y，值越大离地越高，越靠近摄像机） */
+    private static readonly LAYER_Z = 0.001;
 
     public setup(uiRoot: Node, uiScale: Vec3): void {
-        // 贴地 & 缩放
         this.node.setRotationFromEuler(-90, 0, 0);
         this.node.setScale(uiScale);
+        this.node.layer = Layers.Enum.DEFAULT;
 
-        // 挂 RenderRoot2D（预制体根节点已有，加个保险）
-        if (!this.node.getComponent(RenderRoot2D)) {
-            this.node.addComponent(RenderRoot2D);
+        let layer = 0;
+
+        // ─── Sprite 节点 → MeshRenderer Quad ─────────────────────────────
+        for (const sprite of uiRoot.getComponentsInChildren(Sprite)) {
+            if (!sprite.spriteFrame) {
+                continue;
+            }
+            const pos = this._accumPos(sprite.node, uiRoot);
+            const tr = sprite.node.getComponent(UITransform);
+            const w = tr?.width ?? 100;
+            const h = tr?.height ?? 100;
+
+            const renderer = this._addSpriteQuad(
+                sprite.node.name,
+                sprite.spriteFrame,
+                sprite.color,
+                pos.x, pos.y,
+                w, h,
+                layer * PurchaseZoneView.LAYER_Z,
+            );
+
+            if (sprite.node.name === 'filled') {
+                this._filledRenderer = renderer;
+                renderer.node.setScale(0, 1, 1); // 初始隐藏
+            }
+
+            layer++;
         }
 
-        // 放入预制体
-        uiRoot.setParent(this.node);
-        uiRoot.setPosition(Vec3.ZERO);
-        uiRoot.setScale(Vec3.ONE);
-        uiRoot.setRotationFromEuler(0, 0, 0);
-        this._uiRoot = uiRoot;
+        // ─── Label 节点 → canvas2d 纹理 Quad ─────────────────────────────
+        const label = uiRoot.getComponentInChildren(Label);
+        if (label) {
+            const pos = this._accumPos(label.node, uiRoot);
+            const tr = label.node.getComponent(UITransform);
+            const lw = (tr?.width ?? 80) * 2.5;  // 留出足够宽度
+            const lh = (tr?.height ?? 60) * 2.5;
 
-        // 设层，确保主相机可见
-        this._setLayer(this.node, Layers.Enum.UI_3D);
-        this._ensureCameraVisibility();
+            this._amountString = label.string;
+            this._amountTex = this._makeTextTex(label.string, label.fontSize, label.color, lw, lh);
+            if (this._amountTex) {
+                this._amountRenderer = this._addPlainQuad(
+                    'Amount',
+                    this._amountTex,
+                    lw, lh,
+                    pos.x, pos.y,
+                    layer * PurchaseZoneView.LAYER_Z,
+                );
+                layer++;
+            }
+        }
 
-        // 缓存 Label
-        const labels = uiRoot.getComponentsInChildren(Label);
-        this._amountLabel = labels[labels.length - 1] ?? null;
+        uiRoot.destroy();
     }
 
     public setAmount(amount: number): void {
-        if (this._amountLabel) {
-            this._amountLabel.string = `${amount}`;
+        const s = `${amount}`;
+        if (s === this._amountString || !this._amountTex) {
+            return;
         }
+        this._amountString = s;
+        // 重新烘焙文字
+        const canvas = document.createElement('canvas');
+        canvas.width = this._amountTex.width;
+        canvas.height = this._amountTex.height;
+        this._paintText(canvas.getContext('2d')!, s, 60, Color.WHITE);
+        this._amountTex.image = new ImageAsset(canvas);
     }
 
     public setAffordable(affordable: boolean): void {
-        if (this._affordable === affordable || !this.dimWhenUnaffordable) {
+        if (!this.dimWhenUnaffordable) {
             return;
         }
-        this._affordable = affordable;
-        const alpha = affordable ? 255 : 140;
-        for (const r of this.node.getComponentsInChildren(UIRenderer)) {
-            const c = r.color;
-            r.color = new Color(c.r, c.g, c.b, alpha);
+        const a = affordable ? 255 : 140;
+        for (const { mat } of this._quads) {
+            const c = mat.getProperty('mainColor') as Color ?? Color.WHITE;
+            mat.setProperty('mainColor', new Color(c.r, c.g, c.b, a));
         }
     }
 
-    update(): void {
-        if (!this._uiRoot?.isValid) {
-            return;
+    public setProgress(ratio: number): void {
+        if (this._filledRenderer) {
+            this._filledRenderer.node.setScale(Math.max(0, Math.min(1, ratio)), 1, 1);
         }
-        this._uiRoot.active = !this._isOccluded();
+    }
+
+    onDestroy(): void {
+        this._amountTex?.destroy();
     }
 
     // ─── private ────────────────────────────────────────────────────────────
 
-    /** 摄像机→UI 中心是否被栅栏 AABB 遮挡 */
-    private _isOccluded(): boolean {
-        const boundary = PlayAreaBoundary.instance;
-        if (!boundary) {
-            return false;
+    private _accumPos(target: Node, root: Node): { x: number; y: number } {
+        let x = 0;
+        let y = 0;
+        let cur: Node | null = target;
+        while (cur && cur !== root) {
+            x += cur.position.x;
+            y += cur.position.y;
+            cur = cur.parent;
         }
+        return { x, y };
+    }
 
-        const camPos = this._getCameraPos();
-        const uiPos = this.node.worldPosition;
+    private _addSpriteQuad(
+        name: string,
+        frame: SpriteFrame,
+        tint: Color,
+        cx: number, cy: number,
+        w: number, h: number,
+        zOff: number,
+    ): MeshRenderer {
+        const uv = this._frameUV(frame);
+        const tex = frame.texture as Texture2D;
+        const mesh = this._buildQuadMesh(cx, cy, w, h, uv.u0, uv.v0, uv.u1, uv.v1);
+        const mat = this._buildMat(tex, tint);
+        return this._attachRenderer(name, mesh, mat, zOff);
+    }
 
-        // 摄像机到 UI 的方向向量和距离
-        const dir = new Vec3();
-        Vec3.subtract(dir, uiPos, camPos);
-        const dist = dir.length();
-        if (dist < 0.01) {
-            return false;
-        }
-        Vec3.multiplyScalar(dir, dir, 1 / dist);
+    private _addPlainQuad(
+        name: string,
+        tex: Texture2D,
+        w: number, h: number,
+        cx: number, cy: number,
+        zOff: number,
+    ): MeshRenderer {
+        const mesh = this._buildQuadMesh(cx, cy, w, h, 0, 0, 1, 1);
+        const mat = this._buildMat(tex, Color.WHITE);
+        return this._attachRenderer(name, mesh, mat, zOff);
+    }
 
-        // 遍历栅栏 AABB
-        const aabbs = (boundary as any)._fenceAabbs as Array<{ center: Vec3; halfExtents: Vec3 }>;
-        if (!aabbs?.length) {
-            return false;
-        }
+    private _attachRenderer(name: string, mesh: any, mat: Material, zOff: number): MeshRenderer {
+        const node = new Node(name);
+        node.setParent(this.node);
+        node.setPosition(0, 0, zOff);
+        node.layer = Layers.Enum.DEFAULT;
+        const r = node.addComponent(MeshRenderer);
+        r.mesh = mesh;
+        r.setMaterial(mat, 0);
+        this._quads.push({ renderer: r, mat });
+        return r;
+    }
 
-        for (const box of aabbs) {
-            if (this._rayAabb(camPos, dir, dist, box.center, box.halfExtents)) {
-                return true;
-            }
-        }
-        return false;
+    private _buildQuadMesh(cx: number, cy: number, w: number, h: number, u0: number, v0: number, u1: number, v1: number) {
+        return utils.MeshUtils.createMesh({
+            positions: [
+                cx - w / 2, cy - h / 2, 0,
+                cx + w / 2, cy - h / 2, 0,
+                cx + w / 2, cy + h / 2, 0,
+                cx - w / 2, cy + h / 2, 0,
+            ],
+            uvs: [u0, v0, u1, v0, u1, v1, u0, v1],
+            indices: [0, 1, 2, 0, 2, 3],
+        });
     }
 
     /**
-     * Slab 法 ray-AABB 相交检测
-     * ray: origin + t*dir, t∈[0, maxDist]
+     * depthTest: true  → 被玩家/栅栏遮挡 ✓
+     * depthWrite: false → 透明区域不写深度，换角度不变形 ✓
      */
-    private _rayAabb(
-        origin: Vec3,
-        dir: Vec3,
-        maxDist: number,
-        center: Vec3,
-        half: Vec3,
-    ): boolean {
-        const INV = 1e9;
-        let tmin = 0;
-        let tmax = maxDist;
-
-        const axes: Array<'x' | 'y' | 'z'> = ['x', 'y', 'z'];
-        for (const a of axes) {
-            const invD = Math.abs(dir[a]) > 1e-8 ? 1 / dir[a] : INV;
-            let t0 = ((center[a] - half[a]) - origin[a]) * invD;
-            let t1 = ((center[a] + half[a]) - origin[a]) * invD;
-            if (t0 > t1) { const tmp = t0; t0 = t1; t1 = tmp; }
-            tmin = Math.max(tmin, t0);
-            tmax = Math.min(tmax, t1);
-            if (tmin > tmax) {
-                return false;
-            }
-        }
-        return tmin <= tmax;
+    private _buildMat(tex: Texture2D, tint: Color): Material {
+        const mat = new Material();
+        mat.initialize({
+            effectName: 'builtin-unlit',
+            defines: { USE_TEXTURE: true },
+            states: {
+                rasterizerState: { cullMode: gfx.CullMode.NONE },
+                depthStencilState: {
+                    depthTest: true,
+                    depthWrite: false,
+                    depthFunc: gfx.ComparisonFunc.LESS_EQUAL,
+                },
+                blendState: {
+                    targets: [{
+                        blend: true,
+                        blendSrc: gfx.BlendFactor.SRC_ALPHA,
+                        blendDst: gfx.BlendFactor.ONE_MINUS_SRC_ALPHA,
+                        blendEq: gfx.BlendOp.ADD,
+                        blendSrcAlpha: gfx.BlendFactor.ONE,
+                        blendDstAlpha: gfx.BlendFactor.ONE_MINUS_SRC_ALPHA,
+                        blendAlphaEq: gfx.BlendOp.ADD,
+                    }],
+                },
+            },
+        });
+        mat.setProperty('mainTexture', tex);
+        mat.setProperty('mainColor', tint);
+        return mat;
     }
 
-    private _getCameraPos(): Vec3 {
-        if (!this._camNode?.isValid) {
-            this._camNode = director.getScene()?.getChildByName('Main Camera') ?? null;
+    private _frameUV(frame: SpriteFrame): { u0: number; v0: number; u1: number; v1: number } {
+        const uv = frame.uv;
+        if (uv?.length >= 8) {
+            // SpriteFrame.uv: [bl.u, bl.v, br.u, br.v, tl.u, tl.v, tr.u, tr.v]
+            return {
+                u0: uv[0],          // left
+                v0: uv[1],          // bottom
+                u1: uv[2],          // right
+                v1: uv[5],          // top
+            };
         }
-        return this._camNode?.worldPosition ?? Vec3.ZERO;
+        const tex = frame.texture as Texture2D;
+        const r = frame.rect;
+        const tw = tex.width;
+        const th = tex.height;
+        const v0 = 1 - (r.y + r.height) / th;
+        const v1 = 1 - r.y / th;
+        return { u0: r.x / tw, v0, u1: (r.x + r.width) / tw, v1 };
     }
 
-    private _setLayer(root: Node, layer: number): void {
-        root.layer = layer;
-        for (const child of root.children) {
-            this._setLayer(child, layer);
+    private _makeTextTex(text: string, fontSize: number, color: Color, w: number, h: number): Texture2D | null {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(64, Math.ceil(w));
+            canvas.height = Math.max(64, Math.ceil(h));
+            this._paintText(canvas.getContext('2d')!, text, fontSize, color);
+            const tex = new Texture2D();
+            tex.image = new ImageAsset(canvas);
+            tex.setWrapMode(Texture2D.WrapMode.CLAMP_TO_EDGE, Texture2D.WrapMode.CLAMP_TO_EDGE);
+            return tex;
+        } catch {
+            return null;
         }
     }
 
-    private _ensureCameraVisibility(): void {
-        const scene = director.getScene();
-        const cam = scene?.getChildByName('Main Camera')?.getComponent(Camera);
-        if (cam && !(cam.visibility & Layers.Enum.UI_3D)) {
-            cam.visibility |= Layers.Enum.UI_3D;
-        }
+    private _paintText(ctx: CanvasRenderingContext2D, text: string, fontSize: number, color: Color): void {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const mx = ctx.canvas.width / 2;
+        const my = ctx.canvas.height / 2;
+        ctx.strokeStyle = 'rgba(30,30,30,1)';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(text, mx, my);
+        ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${color.a / 255})`;
+        ctx.fillText(text, mx, my);
     }
 }
