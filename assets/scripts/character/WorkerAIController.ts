@@ -15,6 +15,8 @@ import { WorkerMovementController } from './WorkerMovementController';
 const { ccclass, property } = _decorator;
 
 enum WorkerAIState {
+    /** 收割前先回出生点 */
+    GoToSpawnForHarvest,
     SeekPineapple,
     Harvest,
     /** 交付途中：先回工人出生点 */
@@ -48,7 +50,7 @@ export class WorkerAIController extends Component {
     @property({ tooltip: '工人出生点（交付前先回到此点）' })
     spawnPosition = new Vec3();
 
-    private _state = WorkerAIState.SeekPineapple;
+    private _state = WorkerAIState.GoToSpawnForHarvest;
     private _carrier: WorkerFruitCarrier | null = null;
     private _movement: WorkerMovementController | null = null;
     private _targetSource: FruitSource | null = null;
@@ -90,6 +92,9 @@ export class WorkerAIController extends Component {
         }
 
         switch (this._state) {
+            case WorkerAIState.GoToSpawnForHarvest:
+                this._updateGoToSpawnForHarvest(dt);
+                break;
             case WorkerAIState.SeekPineapple:
                 this._updateSeekPineapple(dt);
                 break;
@@ -124,7 +129,7 @@ export class WorkerAIController extends Component {
             return;
         }
 
-        if (!PineappleFieldHelper.hasAvailablePineapple()) {
+        if (!PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
             this._clearTarget();
             this._setState(WorkerAIState.IdleAtSpawn);
             return;
@@ -181,7 +186,7 @@ export class WorkerAIController extends Component {
             this._clearTarget();
             if (carrier.isFull) {
                 this._setState(WorkerAIState.GoToSpawnForDeposit);
-            } else if (!PineappleFieldHelper.hasAvailablePineapple()) {
+            } else if (!PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
                 this._setState(WorkerAIState.IdleAtSpawn);
             } else {
                 this._setState(WorkerAIState.SeekPineapple);
@@ -196,6 +201,44 @@ export class WorkerAIController extends Component {
         }
 
         if (!carrier.isInHarvestRange(this._targetSource)) {
+            this._setState(WorkerAIState.SeekPineapple);
+        }
+    }
+
+    /** 有菠萝可收时：先回出生点，再进 SeekPineapple */
+    private _updateGoToSpawnForHarvest(dt: number): void {
+        const carrier = this._carrier!;
+        if (carrier.isFull) {
+            this._clearTarget();
+            this._setState(WorkerAIState.GoToSpawnForDeposit);
+            return;
+        }
+
+        if (!PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
+            this._clearTarget();
+            this._setState(WorkerAIState.IdleAtSpawn);
+            return;
+        }
+
+        if (this._isAtSpawn()) {
+            this._movement?.setMoving(false);
+            this._setState(WorkerAIState.SeekPineapple);
+            return;
+        }
+
+        this._navTarget.set(this.spawnPosition);
+        const move = BoundaryNavigator.moveToward(
+            this.node,
+            this._navTarget,
+            this.moveSpeed,
+            dt,
+            this.boundary,
+            this.arriveRadius,
+        );
+        this._movement?.setMoving(move.moving);
+
+        if (move.arrived) {
+            this._movement?.setMoving(false);
             this._setState(WorkerAIState.SeekPineapple);
         }
     }
@@ -309,8 +352,10 @@ export class WorkerAIController extends Component {
             return;
         }
 
-        if (PineappleFieldHelper.hasAvailablePineapple()) {
-            this._setState(WorkerAIState.SeekPineapple);
+        if (PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
+            this._setState(this._isAtSpawn()
+                ? WorkerAIState.SeekPineapple
+                : WorkerAIState.GoToSpawnForHarvest);
             return;
         }
 
@@ -331,9 +376,16 @@ export class WorkerAIController extends Component {
     }
 
     private _nextStateAfterEmptyBackpack(): WorkerAIState {
-        return PineappleFieldHelper.hasAvailablePineapple()
-            ? WorkerAIState.SeekPineapple
+        return PineappleFieldHelper.hasHarvestablePineappleFor(this.node)
+            ? WorkerAIState.GoToSpawnForHarvest
             : WorkerAIState.IdleAtSpawn;
+    }
+
+    private _isAtSpawn(): boolean {
+        const pos = this.node.worldPosition;
+        const dx = pos.x - this.spawnPosition.x;
+        const dz = pos.z - this.spawnPosition.z;
+        return dx * dx + dz * dz <= this.arriveRadius * this.arriveRadius;
     }
 
     private _updateWaitAtDepositUI(): void {
@@ -368,7 +420,8 @@ export class WorkerAIController extends Component {
     }
 
     private _setState(state: WorkerAIState): void {
-        if (state === WorkerAIState.GoToSpawnForDeposit
+        if (state === WorkerAIState.GoToSpawnForHarvest
+            || state === WorkerAIState.GoToSpawnForDeposit
             || state === WorkerAIState.GoToDepositUI
             || state === WorkerAIState.WaitAtDepositUI
             || state === WorkerAIState.IdleAtSpawn) {

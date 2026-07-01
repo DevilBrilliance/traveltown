@@ -21,6 +21,21 @@ export class PineappleFieldHelper {
         return false;
     }
 
+    /** 该工人是否还能抢到一株菠萝（未被他人预定） */
+    public static hasHarvestablePineappleFor(worker: Node): boolean {
+        for (const zone of FruitCollectZone.all) {
+            if (zone.fruitType !== FruitType.Pineapple) {
+                continue;
+            }
+            for (const source of zone.sources) {
+                if (source.isAvailable && !source.isReservedByOther(worker)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static findNearestPineapple(
         worker: Node,
         fromWorldPos: Vec3,
