@@ -3,7 +3,6 @@ import {
     Color,
     Component,
     gfx,
-    ImageAsset,
     Label,
     Layers,
     Material,
@@ -113,12 +112,11 @@ export class PurchaseZoneView extends Component {
             return;
         }
         this._amountString = s;
-        // 重新烘焙文字
         const canvas = document.createElement('canvas');
         canvas.width = this._amountTex.width;
         canvas.height = this._amountTex.height;
         this._paintText(canvas.getContext('2d')!, s, 60, Color.WHITE);
-        this._amountTex.image = new ImageAsset(canvas);
+        this._amountTex.uploadData(canvas);
     }
 
     public setAffordable(affordable: boolean): void {
@@ -264,15 +262,22 @@ export class PurchaseZoneView extends Component {
 
     private _makeTextTex(text: string, fontSize: number, color: Color, w: number, h: number): Texture2D | null {
         try {
+            // canvas 分辨率：以字体大小为基准保证清晰度
+            const cw = Math.max(128, Math.ceil(fontSize * 4));
+            const ch = Math.max(64, Math.ceil(fontSize * 1.6));
             const canvas = document.createElement('canvas');
-            canvas.width = Math.max(64, Math.ceil(w));
-            canvas.height = Math.max(64, Math.ceil(h));
+            canvas.width = cw;
+            canvas.height = ch;
             this._paintText(canvas.getContext('2d')!, text, fontSize, color);
+
             const tex = new Texture2D();
-            tex.image = new ImageAsset(canvas);
+            // reset + uploadData 是 Cocos Creator 3.x 最可靠的 canvas → GPU 路径
+            tex.reset({ width: cw, height: ch, format: Texture2D.PixelFormat.RGBA8888, generateMipmaps: false });
+            tex.uploadData(canvas);
             tex.setWrapMode(Texture2D.WrapMode.CLAMP_TO_EDGE, Texture2D.WrapMode.CLAMP_TO_EDGE);
             return tex;
-        } catch {
+        } catch (e) {
+            console.warn('[PurchaseZoneView] 文字纹理创建失败', e);
             return null;
         }
     }

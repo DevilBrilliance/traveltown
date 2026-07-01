@@ -337,6 +337,8 @@
       "__id__": 0
     },
     "fileId": "09Zs372d1AMZWfBgYzfq7e",
+    "instance": null,
+    "targetOverrides": null,
     "nestedPrefabInstanceRoots": null
   },
   {
@@ -691,7 +693,7 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 35.331,
+      "x": 44.170500000000004,
       "y": -70.51,
       "z": 0
     },
@@ -732,8 +734,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 37.3679553512533,
-      "height": 49.36000000000001
+      "width": 48.4921875,
+      "height": 79.60000000000001
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -771,10 +773,10 @@
     "_string": "5",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 71.0625,
-    "_fontSize": 60,
+    "_actualFontSize": 94.75,
+    "_fontSize": 80,
     "_fontFamily": "Arial",
-    "_lineHeight": 36,
+    "_lineHeight": 60,
     "_overflow": 0,
     "_enableWrapText": false,
     "_font": null,
