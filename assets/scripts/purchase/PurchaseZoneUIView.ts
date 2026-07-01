@@ -1,155 +1,43 @@
-import {
-    _decorator,
-    Camera,
-    Canvas,
-    Color,
-    Component,
-    director,
-    gfx,
-    Label,
-    Layers,
-    Node,
-    RenderRoot2D,
-    Sprite,
-    UIRenderer,
-} from 'cc';
+import { _decorator, Component, Node, Vec3 } from 'cc';
+import { BakedPurchaseUI, bakePurchaseUIPrefab } from './PurchaseZoneUIPrefabBaker';
 
 const { ccclass, property } = _decorator;
 
-/** UI_3D 层（与 3D 相机同屏，配合深度测试） */
-export const PURCHASE_UI_LAYER = Layers.Enum.UI_3D;
-
 /**
- * 购买区 UI_3D：RenderRoot2D 渲染在 3D 空间，开启深度测试，可被场景遮挡。
+ * 购买区显示控制：预制体 Sprite 烘焙为贴地 Mesh，参与 3D 深度遮挡。
+ * （预制体仅作布局与图源，运行时不再用 RenderRoot2D 渲染）
  */
 @ccclass('PurchaseZoneUIView')
 export class PurchaseZoneUIView extends Component {
-    @property({ type: Sprite, tooltip: '底板' })
-    bgSprite: Sprite | null = null;
-
-    @property({ type: Label, tooltip: '价格数字' })
-    amountLabel: Label | null = null;
-
-    @property({ type: Sprite, tooltip: '货币 icon' })
-    coinSprite: Sprite | null = null;
-
-    @property({ type: Sprite, tooltip: '解锁物 icon' })
-    rewardSprite: Sprite | null = null;
-
-    @property({ type: Label, tooltip: '加号' })
-    plusLabel: Label | null = null;
-
     @property({ tooltip: '余额不足时变暗' })
     dimWhenUnaffordable = true;
 
+    private _baked: BakedPurchaseUI | null = null;
     private _affordable = true;
 
-    onLoad() {
-        this._bindNodesIfNeeded();
-        this._setupWorldRenderRoot();
-    }
-
-    public static applyUi3DLayer(root: Node): void {
-        const stack: Node[] = [root];
-        while (stack.length > 0) {
-            const current = stack.pop()!;
-            current.layer = PURCHASE_UI_LAYER;
-            for (const child of current.children) {
-                stack.push(child);
-            }
+    /** 从已实例化的 PurchaseZoneUI 预制体烘焙贴地 mesh，然后销毁 2D 节点 */
+    public buildFromPrefab(uiRoot: Node, uiScale: Vec3): void {
+        if (this._baked) {
+            return;
         }
+        this._baked = bakePurchaseUIPrefab(uiRoot, this.node, uiScale);
+        uiRoot.destroy();
     }
 
     public setAmount(amount: number): void {
-        if (this.amountLabel) {
-            this.amountLabel.string = `${amount}`;
-        }
+        this._baked?.setAmount(amount);
     }
 
     public setAffordable(affordable: boolean): void {
+        if (this._affordable === affordable) {
+            return;
+        }
         this._affordable = affordable;
-        if (!this.dimWhenUnaffordable) {
-            return;
-        }
-        const alpha = affordable ? 255 : 140;
-        if (this.bgSprite) {
-            const c = this.bgSprite.color;
-            this.bgSprite.color = new Color(c.r, c.g, c.b, alpha);
-        }
-        if (this.amountLabel) {
-            const c = this.amountLabel.color;
-            this.amountLabel.color = new Color(c.r, c.g, c.b, alpha);
-        }
-        if (this.plusLabel) {
-            const c = this.plusLabel.color;
-            this.plusLabel.color = new Color(c.r, c.g, c.b, alpha);
-        }
-        if (this.coinSprite) {
-            this.coinSprite.color = new Color(255, 255, 255, alpha);
-        }
-        if (this.rewardSprite) {
-            this.rewardSprite.color = new Color(255, 255, 255, alpha);
-        }
+        this._baked?.setAffordable(affordable, this.dimWhenUnaffordable);
     }
 
-    private _bindNodesIfNeeded(): void {
-        this.bgSprite = this.bgSprite ?? this.node.getChildByName('Bg')?.getComponent(Sprite) ?? null;
-        const content = this.node.getChildByName('Content');
-        this.coinSprite = this.coinSprite
-            ?? content?.getChildByName('Coin')?.getComponent(Sprite)
-            ?? null;
-        this.amountLabel = this.amountLabel
-            ?? content?.getChildByName('Amount')?.getComponent(Label)
-            ?? null;
-        this.plusLabel = this.plusLabel
-            ?? content?.getChildByName('Plus')?.getComponent(Label)
-            ?? null;
-        this.rewardSprite = this.rewardSprite
-            ?? content?.getChildByName('Reward')?.getComponent(Sprite)
-            ?? null;
-    }
-
-    /** 使用 RenderRoot2D（非 Canvas），避免屏幕叠层渲染 */
-    private _setupWorldRenderRoot(): void {
-        const canvas = this.getComponent(Canvas);
-        if (canvas) {
-            canvas.destroy();
-        }
-        if (!this.getComponent(RenderRoot2D)) {
-            this.node.addComponent(RenderRoot2D);
-        }
-
-        const camNode = director.getScene()?.getChildByName('Main Camera');
-        const camera = camNode?.getComponent(Camera) ?? null;
-        if (camera) {
-            camera.visibility |= PURCHASE_UI_LAYER;
-        }
-
-        this._enableDepthForTree(this.node);
-    }
-
-    /** 2D UI 默认不写深度，需开启后才能与 3D 物体正确遮挡 */
-    private _enableDepthForTree(root: Node): void {
-        const renderer = root.getComponent(UIRenderer);
-        if (renderer) {
-            this._enableDepth(renderer);
-        }
-        for (const child of root.children) {
-            this._enableDepthForTree(child);
-        }
-    }
-
-    private _enableDepth(renderer: UIRenderer): void {
-        const material = renderer.getMaterialInstance(0);
-        if (!material) {
-            return;
-        }
-        material.overridePipelineStates({
-            depthStencilState: {
-                depthTest: true,
-                depthWrite: true,
-                depthFunc: gfx.ComparisonFunc.LESS_EQUAL,
-            },
-        }, 0);
+    onDestroy() {
+        this._baked?.destroy();
+        this._baked = null;
     }
 }

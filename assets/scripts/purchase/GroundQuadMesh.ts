@@ -3,18 +3,37 @@ import {
     Material,
     MeshRenderer,
     Node,
+    SpriteFrame,
     Texture2D,
-    primitives,
     utils,
 } from 'cc';
-import { GlyphUv } from './GroundDigitAtlas';
+
+export interface QuadUv {
+    u0: number;
+    v0: number;
+    u1: number;
+    v1: number;
+}
 
 export interface GroundQuadSpec {
     cx: number;
     cy: number;
     width: number;
     height: number;
-    uv: GlyphUv;
+    uv: QuadUv;
+}
+
+export function uvFromSpriteFrame(frame: SpriteFrame): QuadUv {
+    const tex = frame.texture as Texture2D;
+    const rect = frame.rect;
+    const texW = tex.width;
+    const texH = tex.height;
+    return {
+        u0: rect.x / texW,
+        v0: rect.y / texH,
+        u1: (rect.x + rect.width) / texW,
+        v1: (rect.y + rect.height) / texH,
+    };
 }
 
 export function createUnlitMaterial(texture: Texture2D, color: Color): Material {
@@ -28,8 +47,7 @@ export function createUnlitMaterial(texture: Texture2D, color: Color): Material 
     return mat;
 }
 
-/** 合并多个 quad 为单个 Mesh（同材质 → 1 DrawCall） */
-export function buildMergedQuadMesh(specs: GroundQuadSpec[]): Mesh {
+export function buildMergedQuadMesh(specs: GroundQuadSpec[]) {
     const positions: number[] = [];
     const uvs: number[] = [];
     const indices: number[] = [];
@@ -66,7 +84,6 @@ export function buildMergedQuadMesh(specs: GroundQuadSpec[]): Mesh {
     });
 }
 
-/** 单 quad MeshRenderer（builtin-unlit，参与 3D 深度） */
 export function addTexturedQuad(
     parent: Node,
     name: string,
@@ -75,28 +92,39 @@ export function addTexturedQuad(
     height: number,
     localPos: { x: number; y: number },
     tint: Color,
+    uv: QuadUv = { u0: 0, v0: 0, u1: 1, v1: 1 },
+    zOffset = 0,
 ): MeshRenderer {
     const node = new Node(name);
     node.setParent(parent);
-    node.setPosition(localPos.x, localPos.y, 0);
+    node.setPosition(localPos.x, localPos.y, zOffset);
+    node.layer = parent.layer;
 
     const renderer = node.addComponent(MeshRenderer);
-    renderer.mesh = utils.MeshUtils.createMesh(primitives.quad());
+    renderer.mesh = buildMergedQuadMesh([{
+        cx: 0,
+        cy: 0,
+        width: 1,
+        height: 1,
+        uv,
+    }]);
     renderer.material = createUnlitMaterial(texture, tint);
     node.setScale(width, height, 1);
     return renderer;
 }
 
-/** 多 quad 合并为单个 MeshRenderer */
 export function addMergedTexturedQuads(
     parent: Node,
     name: string,
     specs: GroundQuadSpec[],
     texture: Texture2D,
     tint: Color,
+    zOffset = 0,
 ): MeshRenderer {
     const node = new Node(name);
     node.setParent(parent);
+    node.setPosition(0, 0, zOffset);
+    node.layer = parent.layer;
 
     const renderer = node.addComponent(MeshRenderer);
     renderer.mesh = buildMergedQuadMesh(specs);

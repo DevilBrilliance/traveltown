@@ -17,11 +17,8 @@ import { PURCHASE_ZONE_UI_PREFAB_PATH } from './PurchaseZonePaths';
 
 const { ccclass, property } = _decorator;
 
-/** 预制体 UI 贴地：绕 X -90°（内部常量，无需手填） */
-const UI_FLAT_EULER_X = -90;
-
 /**
- * 地面购买区：实例化 PurchaseZoneUI 预制体，贴地显示，使用预制体内已配置的图。
+ * 地面购买区：PurchaseZoneUI 预制体 → 烘焙贴地 Mesh（用预制体里的图，可被 3D 遮挡）。
  */
 @ccclass('PurchaseZone')
 export class PurchaseZone extends Component {
@@ -40,10 +37,7 @@ export class PurchaseZone extends Component {
     @property({ tooltip: '贴地 Y 偏移' })
     planeYOffset = 0.02;
 
-    @property({ tooltip: 'UI 相对 pad 的 Y 偏移' })
-    uiYOffset = 0.01;
-
-    @property({ tooltip: 'UI 世界缩放（预制体为像素单位，需缩小）' })
+    @property({ tooltip: 'UI 像素 → 世界单位缩放' })
     uiScale = new Vec3(0.006, 0.006, 0.006);
 
     @property({ tooltip: '玩家进入该半径（世界 XZ）时尝试购买' })
@@ -176,25 +170,22 @@ export class PurchaseZone extends Component {
 
     private _spawnUI(prefab: Prefab): void {
         const pad = this._getOrCreatePad();
-        if (pad.getChildByName('PurchaseZoneUI')) {
-            this._uiView = pad.getChildByName('PurchaseZoneUI')!.getComponent(PurchaseZoneUIView);
+        if (pad.getComponent(PurchaseZoneUIView)) {
+            this._uiView = pad.getComponent(PurchaseZoneUIView);
             return;
         }
 
         const ui = instantiate(prefab);
-        ui.name = 'PurchaseZoneUI';
         ui.setParent(pad);
-        ui.setPosition(0, this.uiYOffset, 0);
-        ui.setRotationFromEuler(UI_FLAT_EULER_X, 0, 0);
-        ui.setScale(this.uiScale);
+        ui.setPosition(0, 0, 0);
+        ui.setScale(1, 1, 1);
+        ui.setRotationFromEuler(0, 0, 0);
 
-        let view = ui.getComponent(PurchaseZoneUIView);
-        if (!view) {
-            view = ui.addComponent(PurchaseZoneUIView);
-        }
+        const view = pad.addComponent(PurchaseZoneUIView);
         view.dimWhenUnaffordable = this.dimWhenUnaffordable;
+        view.buildFromPrefab(ui, this.uiScale);
+        view.setAmount(this.costAmount);
         this._uiView = view;
-        this._uiView.setAmount(this.costAmount);
     }
 
     private _updateAffordVisual(): void {

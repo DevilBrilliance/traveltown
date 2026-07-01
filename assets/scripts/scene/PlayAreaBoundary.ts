@@ -14,7 +14,8 @@ import {
 const { ccclass, property } = _decorator;
 
 const DEFAULT_FENCE_ROOT_NAMES = ['zhalan'] as const;
-const FENCE_NODE_NAME = /^zhalan|ZhaLan/i;
+/** 匹配栅栏节点名，但排除地板（DiBan） */
+const FENCE_NODE_NAME = /^(zhalan|ZhaLan)(?!.*DiBan)/i;
 
 interface FenceAabb {
     center: Vec3;
