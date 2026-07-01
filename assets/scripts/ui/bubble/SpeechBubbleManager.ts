@@ -53,8 +53,14 @@ export class SpeechBubbleManager extends Component {
         if (SpeechBubbleManager._instance) {
             return SpeechBubbleManager._instance;
         }
-        const canvas = director.getScene()?.getChildByName('mainCanvas');
-        const host = canvas ?? director.getScene()!;
+        const scene = director.getScene();
+        const canvas = scene?.getChildByName('mainCanvas');
+        const host = canvas
+            ?? scene?.getChildByName('start')
+            ?? scene?.getChildByName('Island');
+        if (!host) {
+            throw new Error('[SpeechBubbleManager] 未找到可挂载 UI 的节点');
+        }
         return host.getComponent(SpeechBubbleManager) ?? host.addComponent(SpeechBubbleManager);
     }
 

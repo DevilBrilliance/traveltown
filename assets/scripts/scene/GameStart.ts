@@ -20,6 +20,7 @@ import { RewardManager } from '../reward/RewardManager';
 import { SpeechBubbleManager } from '../ui/bubble/SpeechBubbleManager';
 import { OrderBubbleBinder } from '../ui/bubble/OrderBubbleBinder';
 import { SpeechBubbleTestInput } from '../ui/bubble/SpeechBubbleTestInput';
+import { CustomerSpawner } from '../character/CustomerSpawner';
 
 const { ccclass, property } = _decorator;
 
@@ -34,6 +35,10 @@ export class GameStart extends Component {
 
     @property({ tooltip: '主角世界坐标生成位置' })
     spawnPosition = new Vec3(0, 0, 0);
+
+    //顾客出生位置
+    @property({ tooltip: '顾客世界坐标生成位置' })
+    customerSpawnPosition = new Vec3(-19, 0, 0);
 
     @property({ type: Prefab, tooltip: '可选：拖入 resources/characters/NPC_RIG，加载失败时用此引用' })
     protagonistPrefab: Prefab | null = null;
@@ -70,9 +75,22 @@ export class GameStart extends Component {
                 const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
                 bindCameraTouchUI(orbit);
                 this._protagonist = characterNode;
+                this._spawnCustomers();
             },
             this.protagonistPrefab,
         );
+    }
+
+    private _spawnCustomers(): void {
+        let spawner = this.node.getComponent(CustomerSpawner);
+        if (!spawner) {
+            spawner = this.node.addComponent(CustomerSpawner);
+        }
+        spawner.center = this.customerSpawnPosition.clone();
+        spawner.radius = 2;
+        spawner.count = 3;
+        spawner.npcPrefab = this.protagonistPrefab;
+        spawner.spawnCustomers();
     }
 
     public get protagonist(): Node | null {
@@ -80,7 +98,12 @@ export class GameStart extends Component {
     }
 
     private _getSpawnParent(): Node {
-        return this.node.parent ?? director.getScene()!;
+        const island = director.getScene()?.getChildByName('Island');
+        if (island) {
+            return island;
+        }
+        // Scene 根节点不能挂组件，角色统一挂在 start 下
+        return this.node;
     }
 
     private _ensurePlayAreaBoundary(): PlayAreaBoundary | null {
