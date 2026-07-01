@@ -155,6 +155,7 @@ export class JuiceMachine extends Component {
         this._activated = true;
         this._snapToFloorSurface();
         this.node.active = true;
+        this._resolveAnimator();
         // 等场景底板 Mesh 世界包围盒就绪后再创建 UI
         this.scheduleOnce(() => {
             if (!this.isValid || !this._activated) {
@@ -187,6 +188,9 @@ export class JuiceMachine extends Component {
         const ref = this.machineRef;
         if (!ref?.isValid) {
             return;
+        }
+        if (!ref.active) {
+            ref.active = true;
         }
         this._animator = ref.getComponent(JuiceMachineAnimator)
             ?? ref.addComponent(JuiceMachineAnimator);
@@ -221,6 +225,10 @@ export class JuiceMachine extends Component {
     }
 
     private _updateProduction(dt: number): void {
+        if (!this._animator && this.machineRef?.isValid) {
+            this._resolveAnimator();
+        }
+
         const shouldRun = this.isProducing;
         this._animator?.setRunning(shouldRun);
 

@@ -15,8 +15,11 @@ import {
 
 const { ccclass } = _decorator;
 
+/** 与 JiQi_RIG 内置 Take 001 区分，避免播到错误片段 */
+const RUN_CLIP_NAME = 'JiQi_YunXing';
+
 /**
- * 榨汁机骨骼运行动画：有料且未满杯时循环播放 JiQi_YunXing。
+ * 榨汁机骨骼运行动画：有料且未满杯时在 JiQi_RIG 上循环播放 JiQi_YunXing。
  */
 @ccclass('JuiceMachineAnimator')
 export class JuiceMachineAnimator extends Component {
@@ -31,6 +34,10 @@ export class JuiceMachineAnimator extends Component {
     onLoad() {
         JuiceMachineAnimator._ensureClip((clip) => {
             this._clipReady = !!clip;
+            if (!clip) {
+                console.warn('[JuiceMachineAnimator] JiQi_YunXing 动画加载失败');
+                return;
+            }
             if (this._running) {
                 this._playLoop();
             }
@@ -42,28 +49,43 @@ export class JuiceMachineAnimator extends Component {
             return;
         }
         this._running = running;
+        this._toggleStaticShell(running);
         if (!running) {
             this._stop();
             return;
         }
         if (this._clipReady) {
             this._playLoop();
+            return;
+        }
+        JuiceMachineAnimator._ensureClip((clip) => {
+            this._clipReady = !!clip;
+            if (clip && this._running) {
+                this._playLoop();
+            }
+        });
+    }
+
+    /** 场景里 JiQi 静态壳与 JiQi_RIG 重叠，运行时隐藏静态模型 */
+    private _toggleStaticShell(running: boolean): void {
+        const shell = this.node.parent?.getChildByName('JiQi');
+        if (shell?.isValid) {
+            shell.active = !running;
         }
     }
 
     private _ensureSkeletal(): SkeletalAnimation | null {
-        if (this._skeletal?.isValid) {
-            return this._skeletal;
-        }
         let skeletal = this.getComponent(SkeletalAnimation)
             ?? this.getComponentInChildren(SkeletalAnimation);
         if (!skeletal) {
             skeletal = this.node.addComponent(SkeletalAnimation);
-            const renderer = this._findSkinnedRenderer();
-            if (renderer?.skinningRoot) {
-                skeletal.skinningRoot = renderer.skinningRoot;
-            }
         }
+
+        const renderer = this._findSkinnedRenderer();
+        if (renderer?.skinningRoot) {
+            skeletal.skinningRoot = renderer.skinningRoot;
+        }
+
         this._skeletal = skeletal;
         return skeletal;
     }
@@ -84,20 +106,27 @@ export class JuiceMachineAnimator extends Component {
         if (!skeletal || !clip) {
             return;
         }
-        const state = skeletal.getState(clip.name);
-        if (!state) {
-            skeletal.addClip(clip);
+
+        if (!skeletal.getState(RUN_CLIP_NAME)) {
+            skeletal.addClip(clip, RUN_CLIP_NAME);
         }
-        skeletal.play(clip.name);
-        const animState = skeletal.getState(clip.name);
+
+        const animState = skeletal.getState(RUN_CLIP_NAME);
         if (animState) {
             animState.wrapMode = AnimationClip.WrapMode.Loop;
+            animState.repeatCount = Infinity;
         }
+
+        skeletal.play(RUN_CLIP_NAME);
     }
 
     private _stop(): void {
         const skeletal = this._ensureSkeletal();
         if (!skeletal) {
+            return;
+        }
+        if (skeletal.getState(RUN_CLIP_NAME)) {
+            skeletal.stop();
             return;
         }
         skeletal.stop();
@@ -114,23 +143,41 @@ export class JuiceMachineAnimator extends Component {
         }
         JuiceMachineAnimator._loading = true;
 
-        resources.load(`${JUICE_MACHINE_RUN_ANIM_PATH}/${CHARACTER_ANIM_CLIP_SUB_NAME}`, AnimationClip, (err, clip) => {
+        const finish = (clip: AnimationClip | null) => {
+            JuiceMachineAnimator._clip = clip;
+            JuiceMachineAnimator._loading = false;
+            const cbs = JuiceMachineAnimator._callbacks.splice(0);
+            for (const cb of cbs) {
+                cb(clip);
+            }
+        };
+
+        const subPath = `${JUICE_MACHINE_RUN_ANIM_PATH}/${CHARACTER_ANIM_CLIP_SUB_NAME}`;
+        resources.load(subPath, AnimationClip, (err, clip) => {
             if (!err && clip) {
-                JuiceMachineAnimator._finish(clip);
+                finish(clip);
                 return;
             }
-            assetManager.loadAny({ uuid: JUICE_MACHINE_RUN_CLIP_UUID, type: AnimationClip }, (err2, asset) => {
-                JuiceMachineAnimator._finish(!err2 && asset ? asset as AnimationClip : null);
+            resources.load(JUICE_MACHINE_RUN_ANIM_PATH, AnimationClip, (err2, clip2) => {
+                if (!err2 && clip2) {
+                    finish(clip2);
+                    return;
+                }
+                assetManager.loadAny(
+                    { uuid: JUICE_MACHINE_RUN_CLIP_UUID, type: AnimationClip },
+                    (err3, asset) => {
+                        if (err3 || !asset) {
+                            console.warn(
+                                '[JuiceMachineAnimator] 加载 JiQi_YunXing 失败',
+                                err3 ?? err2 ?? err,
+                            );
+                            finish(null);
+                            return;
+                        }
+                        finish(asset as AnimationClip);
+                    },
+                );
             });
         });
-    }
-
-    private static _finish(clip: AnimationClip | null): void {
-        JuiceMachineAnimator._clip = clip;
-        JuiceMachineAnimator._loading = false;
-        const cbs = JuiceMachineAnimator._callbacks.splice(0);
-        for (const cb of cbs) {
-            cb(clip);
-        }
     }
 }
