@@ -13,6 +13,7 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { CharacterAnimController } from './CharacterAnimController';
 import { CharacterAnimState } from './CharacterAnimState';
+import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 
 const { ccclass, property } = _decorator;
@@ -43,6 +44,9 @@ export class PlayerMovementController extends Component {
     @property({ type: PlayAreaBoundary, tooltip: '栅栏碰撞，不填则自动查找' })
     boundary: PlayAreaBoundary | null = null;
 
+    @property({ type: PlayerFruitCarrier, tooltip: '背篓，不填则自动查找同节点组件' })
+    fruitCarrier: PlayerFruitCarrier | null = null;
+
     private _anim: CharacterAnimController | null = null;
     private _isMoving = false;
 
@@ -55,15 +59,25 @@ export class PlayerMovementController extends Component {
 
     onLoad() {
         this._anim = this.getComponent(CharacterAnimController);
+        if (!this.fruitCarrier) {
+            this.fruitCarrier = this.getComponent(PlayerFruitCarrier);
+        }
     }
 
     start() {
         this._resolveJoystick();
         this._resolveCamera();
         this._resolveBoundary();
+        if (!this.fruitCarrier) {
+            this.fruitCarrier = this.getComponent(PlayerFruitCarrier);
+        }
+        this.node.on('fruit-collect-anim-finished', this._refreshLocomotionAnim, this);
+        this.node.on('fruit-carry-changed', this._refreshLocomotionAnim, this);
     }
 
     onDestroy() {
+        this.node.off('fruit-collect-anim-finished', this._refreshLocomotionAnim, this);
+        this.node.off('fruit-carry-changed', this._refreshLocomotionAnim, this);
         if (this._isMoving && this.runSoundEnabled) {
             AudioController.instance?.stopLoop();
         }
@@ -102,16 +116,26 @@ export class PlayerMovementController extends Component {
         }
         this._isMoving = moving;
         if (moving) {
-            this._anim?.play(CharacterAnimState.PlayerRun);
+            this._playLocomotionAnim(true);
             if (this.runSoundEnabled) {
                 AudioController.ensure().playLoop(SoundEffect.Run, this.runSoundVolume);
             }
         } else {
-            this._anim?.play(CharacterAnimState.PlayerIdle);
+            this._playLocomotionAnim(false);
             if (this.runSoundEnabled) {
                 AudioController.instance?.stopLoop();
             }
         }
+    }
+
+    private _refreshLocomotionAnim = (): void => {
+        this._playLocomotionAnim(this._isMoving, true);
+    };
+
+    private _playLocomotionAnim(moving: boolean, force = false): void {
+        const carrierState = this.fruitCarrier?.getLocomotionAnimState(moving);
+        const state = carrierState ?? (moving ? CharacterAnimState.PlayerRun : CharacterAnimState.PlayerIdle);
+        this._anim?.play(state, force);
     }
 
     private _updateRotation(dt: number): void {

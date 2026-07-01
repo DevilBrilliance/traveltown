@@ -21,6 +21,8 @@ import { SpeechBubbleManager } from '../ui/bubble/SpeechBubbleManager';
 import { OrderBubbleBinder } from '../ui/bubble/OrderBubbleBinder';
 import { SpeechBubbleTestInput } from '../ui/bubble/SpeechBubbleTestInput';
 import { CustomerSpawner } from '../character/CustomerSpawner';
+import { FruitCollectFieldSetup } from '../fruit/FruitCollectFieldSetup';
+import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 
 const { ccclass, property } = _decorator;
 
@@ -55,6 +57,7 @@ export class GameStart extends Component {
         this._ensureSpeechBubbleSystem();
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
+        this._ensureFruitCollectFields();
         if (this.autoStart) {
             this.startGame();
         }
@@ -73,6 +76,7 @@ export class GameStart extends Component {
             (_controller, characterNode) => {
                 characterNode.name = 'Protagonist';
                 characterNode.setWorldPosition(this.spawnPosition);
+                characterNode.addComponent(PlayerFruitCarrier);
                 characterNode.addComponent(PlayerMovementController);
                 const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
                 bindCameraTouchUI(orbit);
@@ -126,6 +130,11 @@ export class GameStart extends Component {
         }
         return island.getComponent(PlayableDrawCallOptimizer)
             ?? island.addComponent(PlayableDrawCallOptimizer);
+    }
+
+    private _ensureFruitCollectFields(): void {
+        const island = director.getScene()?.getChildByName('Island');
+        FruitCollectFieldSetup.ensureOnIsland(island);
     }
 
     private _ensureCurrencyWallet(): CurrencyWallet {
