@@ -23,6 +23,14 @@ export class WorkerMovementController extends Component {
     onLoad() {
         this._anim = this.getComponent(CharacterAnimController);
         this._carrier = this.getComponent(WorkerFruitCarrier);
+        this.node.on('fruit-collect-anim-finished', this._onHarvestFinished, this);
+    }
+
+    onDestroy() {
+        this.node?.off('fruit-collect-anim-finished', this._onHarvestFinished, this);
+        if (this._isMoving) {
+            AudioController.instance?.stopLoop();
+        }
     }
 
     public setMoving(moving: boolean): void {
@@ -42,16 +50,20 @@ export class WorkerMovementController extends Component {
     }
 
     public refreshAnim(): void {
+        if (this._carrier?.isHarvesting) {
+            return;
+        }
         this._playLocomotion(this._isMoving, true);
     }
 
-    onDestroy() {
-        if (this._isMoving) {
-            AudioController.instance?.stopLoop();
-        }
-    }
+    private _onHarvestFinished = (): void => {
+        this._playLocomotion(this._isMoving, true);
+    };
 
     private _playLocomotion(moving: boolean, force = false): void {
+        if (this._carrier?.isHarvesting) {
+            return;
+        }
         const state = this._carrier?.getLocomotionAnimState(moving)
             ?? (moving ? CharacterAnimState.PlayerRun : CharacterAnimState.PlayerIdle);
         this._anim?.play(state, force);

@@ -24,6 +24,8 @@ enum WorkerAIState {
     Deposit,
     /** 机器满时在投料 UI 旁等待 */
     WaitAtDepositUI,
+    /** 地里无菠萝：回出生点待机 */
+    IdleAtSpawn,
 }
 
 /**
@@ -84,7 +86,6 @@ export class WorkerAIController extends Component {
 
         if (this._carrier.isHarvesting) {
             this._movement?.setMoving(false);
-            this._movement?.refreshAnim();
             return;
         }
 
@@ -107,6 +108,9 @@ export class WorkerAIController extends Component {
             case WorkerAIState.WaitAtDepositUI:
                 this._updateWaitAtDepositUI();
                 break;
+            case WorkerAIState.IdleAtSpawn:
+                this._updateIdleAtSpawn(dt);
+                break;
             default:
                 break;
         }
@@ -114,9 +118,15 @@ export class WorkerAIController extends Component {
 
     private _updateSeekPineapple(dt: number): void {
         const carrier = this._carrier!;
-        if (carrier.isFull || !PineappleFieldHelper.hasAvailablePineapple()) {
+        if (carrier.isFull) {
             this._clearTarget();
             this._setState(WorkerAIState.GoToSpawnForDeposit);
+            return;
+        }
+
+        if (!PineappleFieldHelper.hasAvailablePineapple()) {
+            this._clearTarget();
+            this._setState(WorkerAIState.IdleAtSpawn);
             return;
         }
 
@@ -132,7 +142,7 @@ export class WorkerAIController extends Component {
 
         if (!this._targetSource) {
             this._movement?.setMoving(false);
-            this._setState(WorkerAIState.GoToSpawnForDeposit);
+            this._setState(WorkerAIState.IdleAtSpawn);
             return;
         }
 
@@ -169,8 +179,10 @@ export class WorkerAIController extends Component {
 
         if (!this._targetSource?.isAvailable) {
             this._clearTarget();
-            if (carrier.isFull || !PineappleFieldHelper.hasAvailablePineapple()) {
+            if (carrier.isFull) {
                 this._setState(WorkerAIState.GoToSpawnForDeposit);
+            } else if (!PineappleFieldHelper.hasAvailablePineapple()) {
+                this._setState(WorkerAIState.IdleAtSpawn);
             } else {
                 this._setState(WorkerAIState.SeekPineapple);
             }
@@ -192,7 +204,7 @@ export class WorkerAIController extends Component {
         const carrier = this._carrier!;
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
-            this._setState(WorkerAIState.SeekPineapple);
+            this._setState(this._nextStateAfterEmptyBackpack());
             return;
         }
 
@@ -223,7 +235,7 @@ export class WorkerAIController extends Component {
         const carrier = this._carrier!;
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
-            this._setState(WorkerAIState.SeekPineapple);
+            this._setState(this._nextStateAfterEmptyBackpack());
             return;
         }
 
@@ -265,7 +277,7 @@ export class WorkerAIController extends Component {
 
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
-            this._setState(WorkerAIState.SeekPineapple);
+            this._setState(this._nextStateAfterEmptyBackpack());
             return;
         }
 
@@ -283,10 +295,45 @@ export class WorkerAIController extends Component {
         machine.depositFromCarrier(carrier, dt);
 
         if (carrier.pineappleCount <= 0) {
-            this._setState(WorkerAIState.SeekPineapple);
+            this._setState(this._nextStateAfterEmptyBackpack());
         } else if (!machine.canDeposit) {
             this._setState(WorkerAIState.WaitAtDepositUI);
         }
+    }
+
+    private _updateIdleAtSpawn(dt: number): void {
+        const carrier = this._carrier!;
+
+        if (carrier.isFull) {
+            this._setState(WorkerAIState.GoToSpawnForDeposit);
+            return;
+        }
+
+        if (PineappleFieldHelper.hasAvailablePineapple()) {
+            this._setState(WorkerAIState.SeekPineapple);
+            return;
+        }
+
+        this._navTarget.set(this.spawnPosition);
+        const move = BoundaryNavigator.moveToward(
+            this.node,
+            this._navTarget,
+            this.moveSpeed,
+            dt,
+            this.boundary,
+            this.arriveRadius,
+        );
+        this._movement?.setMoving(move.moving);
+
+        if (move.arrived) {
+            this._movement?.setMoving(false);
+        }
+    }
+
+    private _nextStateAfterEmptyBackpack(): WorkerAIState {
+        return PineappleFieldHelper.hasAvailablePineapple()
+            ? WorkerAIState.SeekPineapple
+            : WorkerAIState.IdleAtSpawn;
     }
 
     private _updateWaitAtDepositUI(): void {
@@ -298,7 +345,7 @@ export class WorkerAIController extends Component {
 
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
-            this._setState(WorkerAIState.SeekPineapple);
+            this._setState(this._nextStateAfterEmptyBackpack());
             return;
         }
 
@@ -323,7 +370,8 @@ export class WorkerAIController extends Component {
     private _setState(state: WorkerAIState): void {
         if (state === WorkerAIState.GoToSpawnForDeposit
             || state === WorkerAIState.GoToDepositUI
-            || state === WorkerAIState.WaitAtDepositUI) {
+            || state === WorkerAIState.WaitAtDepositUI
+            || state === WorkerAIState.IdleAtSpawn) {
             if (this._state === WorkerAIState.SeekPineapple || this._state === WorkerAIState.Harvest) {
                 this._clearTarget();
             }

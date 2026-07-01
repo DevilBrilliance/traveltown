@@ -156,6 +156,8 @@ export class WorkerFruitCarrier extends Component {
         this._isHarvesting = true;
         this._targetSource = source;
         this.node.getComponent(AppearanceController)?.enableSickle();
+        AudioController.instance?.stopLoop();
+        this.node.emit('fruit-harvest-started');
 
         const anim = this.node.getComponent(CharacterAnimController);
         if (!anim) {
@@ -177,6 +179,8 @@ export class WorkerFruitCarrier extends Component {
         if (source?.isAvailable && this.isInHarvestRange(source) && !this.isFull) {
             this._collect(source);
         }
+
+        this.node.emit('fruit-collect-anim-finished');
     }
 
     private _collect(source: FruitSource): void {
