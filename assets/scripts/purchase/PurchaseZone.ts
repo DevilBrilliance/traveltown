@@ -8,6 +8,8 @@ import {
     Node,
     Prefab,
     resources,
+    Sprite,
+    SpriteFrame,
     Vec3,
 } from 'cc';
 import { CurrencyType } from '../currency/CurrencyType';
@@ -16,6 +18,8 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { OrderManager } from '../order/OrderManager';
 import { OrderSubjectType } from '../order/OrderSubjectType';
+import { RewardManager } from '../reward/RewardManager';
+import { WorkerRewardVariant } from '../reward/RewardType';
 import { PurchaseZoneView } from './PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from './PurchaseZonePaths';
 
@@ -32,6 +36,21 @@ export class PurchaseZone extends Component {
 
     @property({ tooltip: '总需求数量' })
     costAmount = 50;
+
+    @property({ tooltip: '订单展示名称' })
+    displayName = '收银台';
+
+    @property({ tooltip: '奖励展示 icon（resources 路径，不含扩展名）' })
+    rewardIconPath = '';
+
+    @property({ tooltip: '解锁后生成的工人/服务员数量' })
+    grantWorkerCount = 0;
+
+    @property({ type: Enum(WorkerRewardVariant), tooltip: '解锁后生成的工人类型' })
+    grantWorkerVariant: WorkerRewardVariant = WorkerRewardVariant.WorkerNan2;
+
+    @property({ tooltip: '工人生成世界坐标（grantWorkerCount > 0 时）' })
+    workerSpawnPosition = new Vec3(0, 0, 0);
 
     @property({ type: Node, tooltip: '购买后激活的节点（如 SYJ 收银台）' })
     unlockTarget: Node | null = null;
@@ -114,6 +133,14 @@ export class PurchaseZone extends Component {
         return Math.max(0, this.costAmount - this._paidAmount);
     }
 
+    /** 激活购买区（用于解锁链：前置完成后显示） */
+    public activate(): void {
+        if (this._completed || this.node.active) {
+            return;
+        }
+        this.node.active = true;
+    }
+
     // ─── private ─────────────────────────────────────────────────────────
 
     private _getSubjectId(): string {
@@ -126,7 +153,7 @@ export class PurchaseZone extends Component {
             subjectType: OrderSubjectType.Counter,
             requirements: [{ type: this.costType, amount: this.costAmount }],
             subjectNode: null, // 世界 UI 已展示需求，不显示头顶气泡
-            displayName: '收银台',
+            displayName: this.displayName,
         });
         this._syncOrder();
     }
@@ -184,6 +211,14 @@ export class PurchaseZone extends Component {
             this.unlockTarget.active = true;
         }
 
+        if (this.grantWorkerCount > 0) {
+            RewardManager.ensure().grantWorker(
+                this.grantWorkerCount,
+                this.grantWorkerVariant,
+                this.workerSpawnPosition,
+            );
+        }
+
         this.node.emit('purchase-zone-unlocked', this.unlockTarget);
     }
 
@@ -219,6 +254,31 @@ export class PurchaseZone extends Component {
     }
 
     private _buildUI(prefab: Prefab): void {
+        const ui = instantiate(prefab);
+        const finish = () => this._mountUI(ui);
+        if (this.rewardIconPath) {
+            this._swapRewardIcon(ui, finish);
+            return;
+        }
+        finish();
+    }
+
+    private _swapRewardIcon(uiRoot: Node, onDone: () => void): void {
+        const rewardNode = uiRoot.getChildByPath('Content/Reward');
+        const sprite = rewardNode?.getComponent(Sprite);
+        if (!sprite) {
+            onDone();
+            return;
+        }
+        resources.load(`${this.rewardIconPath}/spriteFrame`, SpriteFrame, (err, frame) => {
+            if (!err && frame && sprite.isValid) {
+                sprite.spriteFrame = frame;
+            }
+            onDone();
+        });
+    }
+
+    private _mountUI(uiRoot: Node): void {
         const pad = new Node('PurchasePad');
         pad.setParent(this.node);
         pad.setPosition(0, this.planeYOffset, 0);
@@ -233,8 +293,7 @@ export class PurchaseZone extends Component {
         const view = viewNode.addComponent(PurchaseZoneView);
         view.dimWhenUnaffordable = this.dimWhenUnaffordable;
 
-        const ui = instantiate(prefab);
-        view.setup(ui, this.uiScale);
+        view.setup(uiRoot, this.uiScale);
 
         this._view = view;
         this._refreshUI();

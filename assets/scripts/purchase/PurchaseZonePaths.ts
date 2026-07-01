@@ -10,6 +10,12 @@ export const PURCHASE_COIN_ICON_PATH = BUBBLE_ICON_PATHS[CurrencyType.GoldCoin];
 /** 解锁目标 icon（收银台） */
 export const PURCHASE_REWARD_ICON_PATH = 'textures/输出UI/2收银台_00000';
 
+/** 解锁工人 icon（三人） */
+export const PURCHASE_WORKER_REWARD_ICON_PATH = 'textures/输出UI/3单人_00001';
+
+/** 解锁服务员 icon（单人） */
+export const PURCHASE_WAITER_REWARD_ICON_PATH = 'textures/输出UI/2单人_00001';
+
 /** 购买完成后底板切换为蓝框 */
 export const PURCHASE_ZONE_BG_COMPLETE_PATH = 'textures/输出UI/正方形_蓝框';
 

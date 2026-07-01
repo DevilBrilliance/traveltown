@@ -557,7 +557,7 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -16.669,
+      "x": -40.084,
       "y": -70.51,
       "z": 0
     },
@@ -693,7 +693,7 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 44.170500000000004,
+      "x": 52.208,
       "y": -70.51,
       "z": 0
     },
@@ -771,7 +771,7 @@
       "a": 255
     },
     "_string": "5",
-    "_horizontalAlign": 1,
+    "_horizontalAlign": 0,
     "_verticalAlign": 1,
     "_actualFontSize": 94.75,
     "_fontSize": 80,

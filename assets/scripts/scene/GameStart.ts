@@ -24,6 +24,12 @@ import { SpeechBubbleTestInput } from '../ui/bubble/SpeechBubbleTestInput';
 import { CustomerSpawner } from '../character/CustomerSpawner';
 import { MoneyPickupSpawner } from '../pickup/MoneyPickupSpawner';
 import { PurchaseZone } from '../purchase/PurchaseZone';
+import { ensurePurchaseZone } from '../purchase/PurchaseZoneSetup';
+import {
+    PURCHASE_WAITER_REWARD_ICON_PATH,
+    PURCHASE_WORKER_REWARD_ICON_PATH,
+} from '../purchase/PurchaseZonePaths';
+import { WorkerRewardVariant } from '../reward/RewardType';
 
 const { ccclass, property } = _decorator;
 
@@ -42,10 +48,22 @@ export class GameStart extends Component {
     @property({ type: Prefab, tooltip: '可选：拖入 resources/characters/NPC_RIG，加载失败时用此引用' })
     protagonistPrefab: Prefab | null = null;
 
-   
+    @property({ tooltip: '解锁工人购买区世界坐标' })
+    workerPurchasePosition = new Vec3(6, 0, -4);
+
+    @property({ tooltip: '解锁服务员购买区世界坐标' })
+    cashierPurchasePosition = new Vec3(2, 0, -4);
+
+    @property({ tooltip: '工人解锁后生成位置' })
+    workerSpawnPosition = new Vec3(12, 0, -8);
+
+    @property({ tooltip: '服务员解锁后生成位置（收银台旁）' })
+    cashierSpawnPosition = new Vec3(-3, 0, 5);
 
     private _protagonist: Node | null = null;
     private _customersSpawned = false;
+    private _workerPurchaseZone: PurchaseZone | null = null;
+    private _cashierPurchaseZone: PurchaseZone | null = null;
 
     onLoad() {
         this._ensureCurrencyWallet();
@@ -56,7 +74,7 @@ export class GameStart extends Component {
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
         this._spawnMoneyPickups();
-        this.scheduleOnce(() => this._bindCashRegisterUnlock(), 0);
+        this.scheduleOnce(() => this._bindUnlockChain(), 0);
         if (this.autoStart) {
             this.startGame();
         }
@@ -64,8 +82,9 @@ export class GameStart extends Component {
 
     onDestroy() {
         const island = director.getScene()?.getChildByName('Island');
-        const zoneNode = island?.getChildByName('CounterPurchaseZone');
-        zoneNode?.off('purchase-zone-ui-closed', this._onPurchaseZoneUiClosed, this);
+        const counterZone = island?.getChildByName('CounterPurchaseZone');
+        counterZone?.off('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
+        this._workerPurchaseZone?.node.off('purchase-zone-ui-closed', this._onWorkerUnlocked, this);
     }
 
     /** 开始游戏并创建主角 */
@@ -90,23 +109,70 @@ export class GameStart extends Component {
         );
     }
 
-    private _bindCashRegisterUnlock(): void {
+    private _bindUnlockChain(): void {
         const island = director.getScene()?.getChildByName('Island');
-        const zoneNode = island?.getChildByName('CounterPurchaseZone');
-        zoneNode?.on('purchase-zone-ui-closed', this._onPurchaseZoneUiClosed, this);
+        if (!island) {
+            return;
+        }
 
-        const purchaseZone = zoneNode?.getComponent(PurchaseZone);
-        if (purchaseZone?.isPurchased) {
-            this._onPurchaseZoneUiClosed();
+        this._setupWorkerAndCashierZones(island);
+
+        const counterZone = island.getChildByName('CounterPurchaseZone');
+        counterZone?.on('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
+
+        const counterPurchase = counterZone?.getComponent(PurchaseZone);
+        if (counterPurchase?.isPurchased) {
+            this._onCashRegisterUnlocked();
         }
     }
 
-    private _onPurchaseZoneUiClosed(): void {
-        if (this._customersSpawned) {
-            return;
+    private _setupWorkerAndCashierZones(island: Node): void {
+        this._workerPurchaseZone = ensurePurchaseZone(
+            island,
+            'WorkerPurchaseZone',
+            this.workerPurchasePosition,
+            {
+                costAmount: 100,
+                displayName: '工人',
+                orderSubjectId: 'Unlock_Workers',
+                rewardIconPath: PURCHASE_WORKER_REWARD_ICON_PATH,
+                grantWorkerCount: 3,
+                grantWorkerVariant: WorkerRewardVariant.WorkerNan2,
+                workerSpawnPosition: this.workerSpawnPosition,
+            },
+        );
+        this._workerPurchaseZone.node.on('purchase-zone-ui-closed', this._onWorkerUnlocked, this);
+
+        this._cashierPurchaseZone = ensurePurchaseZone(
+            island,
+            'CashierPurchaseZone',
+            this.cashierPurchasePosition,
+            {
+                costAmount: 50,
+                displayName: '服务员',
+                orderSubjectId: 'Unlock_Cashier',
+                rewardIconPath: PURCHASE_WAITER_REWARD_ICON_PATH,
+                grantWorkerCount: 1,
+                grantWorkerVariant: WorkerRewardVariant.WorkerNv1,
+                workerSpawnPosition: this.cashierSpawnPosition,
+            },
+        );
+
+        if (this._workerPurchaseZone.isPurchased) {
+            this._onWorkerUnlocked();
         }
-        this._customersSpawned = true;
-        this._spawnCustomers();
+    }
+
+    private _onCashRegisterUnlocked(): void {
+        if (!this._customersSpawned) {
+            this._customersSpawned = true;
+            this._spawnCustomers();
+        }
+        this._workerPurchaseZone?.activate();
+    }
+
+    private _onWorkerUnlocked(): void {
+        this._cashierPurchaseZone?.activate();
     }
 
     private _spawnCustomers(): void {
