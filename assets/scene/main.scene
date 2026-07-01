@@ -141,8 +141,8 @@
       "__id__": 4
     },
     "_visibility": -325058561,
-    "_illuminanceHDR": 90000,
-    "_illuminance": 90000,
+    "_illuminanceHDR": 110000,
+    "_illuminance": 110000,
     "_illuminanceLDR": 1.6927083333333335,
     "_shadowEnabled": false,
     "_shadowPcf": 0,
@@ -51024,9 +51024,9 @@
     "_dstBlendFactor": 4,
     "_color": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 7,
+      "g": 255,
+      "b": 235,
       "a": 255
     },
     "_string": "0",
