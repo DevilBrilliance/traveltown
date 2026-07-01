@@ -29,6 +29,11 @@ import {
     PURCHASE_WAITER_REWARD_ICON_PATH,
     PURCHASE_WORKER_REWARD_ICON_PATH,
 } from '../purchase/PurchaseZonePaths';
+import {
+    PINEAPPLE_FIELD_LOOK_AT,
+    WORKER_PURCHASE_POSITION,
+    WORKER_SPAWN_POSITIONS,
+} from '../purchase/WorkerPurchaseConfig';
 import { WorkerRewardVariant } from '../reward/RewardType';
 import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
@@ -56,13 +61,10 @@ export class GameStart extends Component {
     protagonistPrefab: Prefab | null = null;
 
     @property({ tooltip: '解锁工人购买区世界坐标' })
-    workerPurchasePosition = new Vec3(6, 0, -4);
+    workerPurchasePosition = WORKER_PURCHASE_POSITION.clone();
 
     @property({ tooltip: '解锁服务员购买区世界坐标' })
     cashierPurchasePosition = new Vec3(2, 0, -4);
-
-    @property({ tooltip: '工人解锁后生成位置' })
-    workerSpawnPosition = new Vec3(12, 0, -8);
 
     @property({ tooltip: '服务员解锁后生成位置（收银台旁）' })
     cashierSpawnPosition = new Vec3(-3, 0, 5);
@@ -156,7 +158,8 @@ export class GameStart extends Component {
                 rewardIconPath: PURCHASE_WORKER_REWARD_ICON_PATH,
                 grantWorkerCount: 3,
                 grantWorkerVariant: WorkerRewardVariant.WorkerNan2,
-                workerSpawnPosition: this.workerSpawnPosition,
+                workerSpawnPositions: WORKER_SPAWN_POSITIONS,
+                workerLookAtTarget: PINEAPPLE_FIELD_LOOK_AT,
             },
         );
         this._workerPurchaseZone.node.on('purchase-zone-ui-closed', this._onWorkerUnlocked, this);

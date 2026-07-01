@@ -4,8 +4,10 @@ import {
     Component,
     director,
     instantiate,
+    math,
     Node,
     Prefab,
+    Quat,
     resources,
     Vec3,
 } from 'cc';
@@ -21,6 +23,7 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { CurrencyType } from '../currency/CurrencyType';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
+import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import {
     RewardGrantSpec,
     RewardItem,
@@ -179,6 +182,25 @@ export class RewardManager extends Component {
         return partial.workers;
     }
 
+    /** 在指定世界坐标生成工人，并可统一朝向目标点 */
+    public grantWorkersAt(
+        count: number,
+        variant: WorkerRewardVariant = WorkerRewardVariant.WorkerNan2,
+        positions: readonly Vec3[],
+        lookAtTarget?: Vec3,
+    ): Node[] {
+        const partial = this._grantWorkersAt(count, variant, positions, lookAtTarget);
+        const result: RewardGrantResult = {
+            success: partial.ok,
+            granted: partial.ok ? [{ type: RewardType.Worker, amount: count, workerVariant: variant }] : [],
+            spawnedWorkers: partial.workers,
+        };
+        if (result.granted.length > 0) {
+            this._notify(result);
+        }
+        return partial.workers;
+    }
+
     /** 奖励描述 */
     public formatRewards(specs: RewardGrantSpec[]): string {
         return specs.map((s) => {
@@ -248,6 +270,61 @@ export class RewardManager extends Component {
         }
 
         return { ok: spawned.length === count, workers: spawned };
+    }
+
+    private _grantWorkersAt(
+        count: number,
+        variant: WorkerRewardVariant,
+        positions: readonly Vec3[],
+        lookAtTarget?: Vec3,
+    ): { ok: boolean; workers: Node[] } {
+        if (positions.length === 0) {
+            return { ok: false, workers: [] };
+        }
+
+        const prefab = this._npcPrefab ?? this.workerPrefab;
+        if (!prefab) {
+            console.warn('[RewardManager] 工人预制体未就绪，请稍后再试');
+            return { ok: false, workers: [] };
+        }
+
+        const appearance = WORKER_APPEARANCE[variant];
+        const parent = this._resolveWorkerParent();
+        const island = director.getScene()?.getChildByName('Island') ?? null;
+        const spawned: Node[] = [];
+
+        for (let i = 0; i < count; i += 1) {
+            const index = this._workerSeq++;
+            const template = positions[i % positions.length];
+            const pos = IslandSurfaceSampler.snapWorldPositionToSurface(
+                template.clone(),
+                island,
+                0,
+            );
+            const node = this._instantiateWorker(parent, prefab, appearance, index, pos);
+            if (node) {
+                if (lookAtTarget) {
+                    this._faceTarget(node, lookAtTarget);
+                }
+                spawned.push(node);
+                this._workers.add(node);
+            }
+        }
+
+        return { ok: spawned.length === count, workers: spawned };
+    }
+
+    private _faceTarget(node: Node, target: Vec3): void {
+        const pos = node.worldPosition;
+        const dx = target.x - pos.x;
+        const dz = target.z - pos.z;
+        if (dx * dx + dz * dz < 1e-6) {
+            return;
+        }
+        const yaw = math.toDegree(Math.atan2(dx, dz));
+        const rot = new Quat();
+        Quat.fromEuler(rot, 0, yaw, 0);
+        node.setWorldRotation(rot);
     }
 
     private _instantiateWorker(

@@ -10,7 +10,14 @@ import {
     Prefab,
     Vec3,
 } from 'cc';
+import { AudioController } from '../audio/AudioController';
+import { SoundEffect } from '../audio/SoundEffect';
 import { CharacterAnimState } from '../character/CharacterAnimState';
+import { CurrencyWallet } from '../currency/CurrencyWallet';
+import { CurrencyType } from '../currency/CurrencyType';
+import { OrderManager } from '../order/OrderManager';
+import { OrderSubjectType } from '../order/OrderSubjectType';
+import { OrderInfo } from '../order/OrderTypes';
 import { JuiceMachine } from './JuiceMachine';
 import { JUICE_TRAY_DB_PATH, JUICE_TRAY_PREFAB_UUID } from './JuiceMachinePaths';
 import { JuiceRackBounds } from './JuiceRackBounds';
@@ -51,7 +58,10 @@ export class PlayerJuiceTrayCarrier extends Component {
     maxCarryCount = 12;
 
     @property({ tooltip: '每取一杯间隔（秒）' })
-    transferInterval = 1;
+    transferInterval = 0.5;
+
+    @property({ tooltip: '收银台每交付一杯间隔（秒）' })
+    deliverInterval = 0.5;
 
     @property({ tooltip: '托盘挂点（玩家本地坐标，同后背菠萝挂法）' })
     trayLocalPos = new Vec3(0, 1.35, 0.75);
@@ -77,6 +87,15 @@ export class PlayerJuiceTrayCarrier extends Component {
     @property({ tooltip: '托盘 Z 方向行数（先 Z 后 X）' })
     trayRowsZ = 4;
 
+    @property({ type: Node, tooltip: '收银台节点（SYJ），不填则自动查找' })
+    counterNode: Node | null = null;
+
+    @property({ tooltip: '收银台交付范围（世界单位）' })
+    counterRadius = 2;
+
+    @property({ tooltip: '每杯果汁交付获得金币' })
+    coinPerGlass = 20;
+
     private _trayMount: Node | null = null;
     private _trayModel: Node | null = null;
     private _glassRoot: Node | null = null;
@@ -86,6 +105,7 @@ export class PlayerJuiceTrayCarrier extends Component {
     private _inPickupZone = false;
     private _carriedCount = 0;
     private _transferTimer = 0;
+    private _deliverTimer = 0;
     private _rackAabbReady = false;
 
     private readonly _glassLocalPos = new Vec3();
@@ -155,6 +175,16 @@ export class PlayerJuiceTrayCarrier extends Component {
         this._inPickupZone = shouldPickup;
         if (wasInZone !== this._inPickupZone) {
             this.node.emit('juice-tray-changed', this._carriedCount);
+        }
+
+        if (this._carriedCount > 0 && this._isNearCounter()) {
+            this._handleCounterDelivery(dt);
+            if (this._carriedCount > 0) {
+                this._updateTrayMount();
+                this._ensureTray();
+                return;
+            }
+            this._endTrayStateIfEmpty();
         }
 
         const shouldShowTray = this._carriedCount > 0 || shouldPickup;
@@ -328,9 +358,139 @@ export class PlayerJuiceTrayCarrier extends Component {
         const wasVisible = this._trayVisible;
         this._trayVisible = false;
         this._transferTimer = 0;
+        this._deliverTimer = 0;
         if (wasVisible) {
             this.node.emit('juice-tray-changed', this._carriedCount);
         }
+    }
+
+    private _endTrayStateIfEmpty(): void {
+        if (this._carriedCount > 0) {
+            return;
+        }
+        this._hideTray();
+        if (!this._inPickupZone) {
+            this.node.emit('juice-tray-changed', 0);
+        }
+    }
+
+    private _resolveCounter(): Node | null {
+        if (this.counterNode?.isValid) {
+            return this.counterNode;
+        }
+        const island = director.getScene()?.getChildByName('Island');
+        if (!island) {
+            return null;
+        }
+        const syj = findChildDeep(island, 'SYJ');
+        if (syj?.isValid) {
+            this.counterNode = syj;
+            return syj;
+        }
+        const zone = island.getChildByName('CounterPurchaseZone');
+        if (zone?.isValid) {
+            this.counterNode = zone;
+            return zone;
+        }
+        return null;
+    }
+
+    private _isNearCounter(): boolean {
+        const counter = this._resolveCounter();
+        if (!counter?.isValid) {
+            return false;
+        }
+        const pp = this.node.worldPosition;
+        return JuiceRackBounds.isPointNearNode(
+            counter,
+            pp.x,
+            pp.z,
+            this.counterRadius,
+            true,
+        );
+    }
+
+    private _findPendingCustomerJuiceOrder(): OrderInfo | null {
+        const orders = OrderManager.instance?.getPendingOrders() ?? [];
+        for (const order of orders) {
+            if (order.subjectType !== OrderSubjectType.Customer) {
+                continue;
+            }
+            const juice = order.requirements.find((r) => r.type === CurrencyType.PineappleJuice);
+            if (juice && juice.amount > 0) {
+                return order;
+            }
+        }
+        return null;
+    }
+
+    private _handleCounterDelivery(dt: number): void {
+        const order = this._findPendingCustomerJuiceOrder();
+        if (!order) {
+            this._deliverTimer = 0;
+            return;
+        }
+
+        this._deliverTimer += dt;
+        while (
+            this._deliverTimer >= this.deliverInterval
+            && this._carriedCount > 0
+        ) {
+            const juiceReq = order.requirements.find((r) => r.type === CurrencyType.PineappleJuice);
+            if (!juiceReq || juiceReq.amount <= 0) {
+                break;
+            }
+            if (!this._removeOneCarriedGlass()) {
+                break;
+            }
+
+            CurrencyWallet.ensure().add(CurrencyType.GoldCoin, this.coinPerGlass);
+            AudioController.ensure().play(SoundEffect.CollectCoin);
+
+            const nextReqs = order.requirements
+                .map((r) => (
+                    r.type === CurrencyType.PineappleJuice
+                        ? { type: r.type, amount: r.amount - 1 }
+                        : { type: r.type, amount: r.amount }
+                ))
+                .filter((r) => r.amount > 0);
+
+            const manager = OrderManager.ensure();
+            manager.syncRequirements(order.subjectId, nextReqs);
+            if (nextReqs.length === 0) {
+                manager.completeOrder(order.subjectId);
+            }
+
+            this._deliverTimer -= this.deliverInterval;
+            this.node.emit('juice-tray-changed', this._carriedCount);
+        }
+    }
+
+    private _removeOneCarriedGlass(): boolean {
+        if (!this._glassRoot?.isValid || this._carriedCount <= 0) {
+            return false;
+        }
+
+        let best: Node | null = null;
+        let bestIdx = -1;
+        for (const child of this._glassRoot.children) {
+            const match = /^JuiceGlass_(\d+)$/.exec(child.name);
+            const idx = match ? parseInt(match[1], 10) : 0;
+            if (idx > bestIdx) {
+                bestIdx = idx;
+                best = child;
+            }
+        }
+        if (!best && this._glassRoot.children.length > 0) {
+            best = this._glassRoot.children[this._glassRoot.children.length - 1];
+        }
+        if (!best?.isValid) {
+            return false;
+        }
+
+        best.destroy();
+        this._carriedCount = Math.max(0, this._carriedCount - 1);
+        return true;
     }
 
     private _countSceneGlasses(rack: Node, machine: JuiceMachine | null): number {

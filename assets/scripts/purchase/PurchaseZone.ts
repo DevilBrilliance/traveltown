@@ -86,6 +86,8 @@ export class PurchaseZone extends Component {
     private _completed = false;
     private _view: PurchaseZoneView | null = null;
     private _padNode: Node | null = null;
+    private readonly _workerSpawnPositions: Vec3[] = [];
+    private readonly _workerLookAtTarget = new Vec3(0, 0, 5);
     private readonly _onBalanceChanged = () => this._updateAffordable();
 
     onLoad() {
@@ -131,6 +133,17 @@ export class PurchaseZone extends Component {
 
     public get remainingAmount(): number {
         return Math.max(0, this.costAmount - this._paidAmount);
+    }
+
+    /** 配置固定工人生成点与朝向（优先于 workerSpawnPosition 网格排布） */
+    public setWorkerSpawnPositions(positions: Vec3[], lookAtTarget?: Vec3): void {
+        this._workerSpawnPositions.length = 0;
+        for (const pos of positions) {
+            this._workerSpawnPositions.push(pos.clone());
+        }
+        if (lookAtTarget) {
+            this._workerLookAtTarget.set(lookAtTarget);
+        }
     }
 
     /** 激活购买区（用于解锁链：前置完成后显示） */
@@ -212,11 +225,21 @@ export class PurchaseZone extends Component {
         }
 
         if (this.grantWorkerCount > 0) {
-            RewardManager.ensure().grantWorker(
-                this.grantWorkerCount,
-                this.grantWorkerVariant,
-                this.workerSpawnPosition,
-            );
+            const manager = RewardManager.ensure();
+            if (this._workerSpawnPositions.length > 0) {
+                manager.grantWorkersAt(
+                    this.grantWorkerCount,
+                    this.grantWorkerVariant,
+                    this._workerSpawnPositions,
+                    this._workerLookAtTarget,
+                );
+            } else {
+                manager.grantWorker(
+                    this.grantWorkerCount,
+                    this.grantWorkerVariant,
+                    this.workerSpawnPosition,
+                );
+            }
         }
 
         this.node.emit('purchase-zone-unlocked', this.unlockTarget);

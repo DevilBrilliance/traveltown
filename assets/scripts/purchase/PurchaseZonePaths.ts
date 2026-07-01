@@ -11,7 +11,7 @@ export const PURCHASE_COIN_ICON_PATH = BUBBLE_ICON_PATHS[CurrencyType.GoldCoin];
 export const PURCHASE_REWARD_ICON_PATH = 'textures/输出UI/2收银台_00000';
 
 /** 解锁工人 icon（三人） */
-export const PURCHASE_WORKER_REWARD_ICON_PATH = 'textures/输出UI/3单人_00001';
+export const PURCHASE_WORKER_REWARD_ICON_PATH = 'textures/输出UI/23角色_00001';
 
 /** 解锁服务员 icon（单人） */
 export const PURCHASE_WAITER_REWARD_ICON_PATH = 'textures/输出UI/2单人_00001';

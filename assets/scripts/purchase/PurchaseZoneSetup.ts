@@ -1,4 +1,5 @@
 import { Node, Vec3 } from 'cc';
+import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import { WorkerRewardVariant } from '../reward/RewardType';
 import { PurchaseZone } from './PurchaseZone';
 
@@ -10,6 +11,8 @@ export interface PurchaseZoneConfig {
     grantWorkerCount?: number;
     grantWorkerVariant?: WorkerRewardVariant;
     workerSpawnPosition?: Vec3;
+    workerSpawnPositions?: readonly Vec3[];
+    workerLookAtTarget?: Vec3;
     unlockTarget?: Node | null;
 }
 
@@ -27,7 +30,12 @@ export function ensurePurchaseZone(
         node = new Node(name);
         node.setParent(parent);
     }
-    node.setWorldPosition(worldPosition);
+    const snapped = IslandSurfaceSampler.snapWorldPositionToSurface(
+        worldPosition.clone(),
+        parent,
+        0,
+    );
+    node.setWorldPosition(snapped);
     if (node.active) {
         node.active = false;
     }
@@ -41,12 +49,31 @@ export function ensurePurchaseZone(
     if (config.grantWorkerVariant !== undefined) {
         zone.grantWorkerVariant = config.grantWorkerVariant;
     }
-    if (config.workerSpawnPosition) {
+    if (config.workerSpawnPositions && config.workerSpawnPositions.length > 0) {
+        zone.setWorkerSpawnPositions(
+            [...config.workerSpawnPositions],
+            config.workerLookAtTarget,
+        );
+    } else if (config.workerSpawnPosition) {
         zone.workerSpawnPosition = config.workerSpawnPosition.clone();
     }
     zone.unlockTarget = config.unlockTarget ?? null;
     if (!zone.isPurchased) {
         node.active = false;
     }
+
+    zone.scheduleOnce(() => {
+        if (!node.isValid) {
+            return;
+        }
+        node.setWorldPosition(
+            IslandSurfaceSampler.snapWorldPositionToSurface(
+                worldPosition.clone(),
+                parent,
+                0,
+            ),
+        );
+    }, 0.2);
+
     return zone;
 }
