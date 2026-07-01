@@ -30,6 +30,8 @@ import {
     PURCHASE_WORKER_REWARD_ICON_PATH,
 } from '../purchase/PurchaseZonePaths';
 import { WorkerRewardVariant } from '../reward/RewardType';
+import { FruitCollectFieldSetup } from '../fruit/FruitCollectFieldSetup';
+import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 
 const { ccclass, property } = _decorator;
 
@@ -74,6 +76,7 @@ export class GameStart extends Component {
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
         this._spawnMoneyPickups();
+        this._ensureFruitCollectFields();
         this.scheduleOnce(() => this._bindUnlockChain(), 0);
         if (this.autoStart) {
             this.startGame();
@@ -100,6 +103,7 @@ export class GameStart extends Component {
             (_controller, characterNode) => {
                 characterNode.name = 'Protagonist';
                 characterNode.setWorldPosition(this.spawnPosition);
+                characterNode.addComponent(PlayerFruitCarrier);
                 characterNode.addComponent(PlayerMovementController);
                 const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
                 bindCameraTouchUI(orbit);
@@ -242,6 +246,11 @@ export class GameStart extends Component {
         }
         return island.getComponent(PlayableDrawCallOptimizer)
             ?? island.addComponent(PlayableDrawCallOptimizer);
+    }
+
+    private _ensureFruitCollectFields(): void {
+        const island = director.getScene()?.getChildByName('Island');
+        FruitCollectFieldSetup.ensureOnIsland(island);
     }
 
     private _ensureCurrencyWallet(): CurrencyWallet {

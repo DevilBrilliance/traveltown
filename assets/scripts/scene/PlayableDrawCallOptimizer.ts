@@ -25,8 +25,8 @@ export class PlayableDrawCallOptimizer extends Component {
     @property({ tooltip: '对指定分组做静态网格合批（如 zhalan 栏杆）' })
     enableStaticBatch = true;
 
-    @property({ type: [String], tooltip: '静态合批的分组节点名（Island 下）' })
-    staticBatchGroups: string[] = ['zhalan', 'pineapple'];
+    @property({ type: [String], tooltip: '静态合批的分组节点名（Island 下）；可采集水果不要合批' })
+    staticBatchGroups: string[] = ['zhalan'];
 
     @property({ tooltip: '对剩余静态网格尝试 GPU Instancing（同材质实例）' })
     enableGpuInstancing = true;

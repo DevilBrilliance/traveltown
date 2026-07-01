@@ -119,6 +119,12 @@ export class CharacterAnimController extends Component {
         this._skeletal = skeletal;
     }
 
+    /** 获取骨骼动画组件（挂点 Socket 需要） */
+    public getSkeletalAnimation(): SkeletalAnimation | null {
+        this._ensureSkeletalAnimation();
+        return this._skeletal;
+    }
+
     private _findActiveSkinnedMeshRenderer(): SkinnedMeshRenderer | null {
         const renderers = this.node.getComponentsInChildren(SkinnedMeshRenderer);
         for (const renderer of renderers) {
