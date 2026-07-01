@@ -9,6 +9,7 @@ import { hasPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
 import { BoundaryNavigator } from '../navigation/BoundaryNavigator';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
+import { resolveCounterDeliveryNode } from '../juice/CounterDeliveryHelper';
 import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 import { WaiterMovementController } from './WaiterMovementController';
 
@@ -244,18 +245,10 @@ export class WaiterAIController extends Component {
             return this._counterNode;
         }
         const island = director.getScene()?.getChildByName('Island');
-        if (!island) {
-            return null;
-        }
-        const syj = findChildDeep(island, 'SYJ');
-        if (syj?.isValid) {
-            this._counterNode = syj;
-            return syj;
-        }
-        const zone = island.getChildByName('CounterPurchaseZone');
-        if (zone?.isValid) {
-            this._counterNode = zone;
-            return zone;
+        const zuozi = resolveCounterDeliveryNode(island);
+        if (zuozi) {
+            this._counterNode = zuozi;
+            return zuozi;
         }
         return null;
     }

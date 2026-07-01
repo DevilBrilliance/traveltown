@@ -20,6 +20,11 @@ import { findPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
 import { JuiceMachine } from './JuiceMachine';
 import { JUICE_TRAY_DB_PATH, JUICE_TRAY_PREFAB_UUID } from './JuiceMachinePaths';
 import { JuiceRackBounds } from './JuiceRackBounds';
+import {
+    COUNTER_DELIVERY_RADIUS,
+    isActorNearCounterDelivery,
+    resolveCounterDeliveryNode,
+} from './CounterDeliveryHelper';
 
 const { ccclass, property } = _decorator;
 
@@ -86,11 +91,11 @@ export class PlayerJuiceTrayCarrier extends Component {
     @property({ tooltip: '手持托盘 Z 方向行数（先 Z 后 X）' })
     trayRowsZ = 4;
 
-    @property({ type: Node, tooltip: '收银台节点（SYJ），不填则自动查找' })
+    @property({ type: Node, tooltip: '收银台交付点（ZuoZi），不填则自动查找' })
     counterNode: Node | null = null;
 
-    @property({ tooltip: '收银台交付范围（世界单位）' })
-    counterRadius = 2;
+    @property({ tooltip: '收银台交付范围（世界单位，相对 ZuoZi）' })
+    counterRadius = COUNTER_DELIVERY_RADIUS;
 
     @property({ tooltip: '每杯果汁交付获得金币' })
     coinPerGlass = 20;
@@ -393,18 +398,10 @@ export class PlayerJuiceTrayCarrier extends Component {
             return this.counterNode;
         }
         const island = director.getScene()?.getChildByName('Island');
-        if (!island) {
-            return null;
-        }
-        const syj = findChildDeep(island, 'SYJ');
-        if (syj?.isValid) {
-            this.counterNode = syj;
-            return syj;
-        }
-        const zone = island.getChildByName('CounterPurchaseZone');
-        if (zone?.isValid) {
-            this.counterNode = zone;
-            return zone;
+        const zuozi = resolveCounterDeliveryNode(island);
+        if (zuozi) {
+            this.counterNode = zuozi;
+            return zuozi;
         }
         return null;
     }
@@ -415,13 +412,7 @@ export class PlayerJuiceTrayCarrier extends Component {
             return false;
         }
         const pp = this.node.worldPosition;
-        return JuiceRackBounds.isPointNearNode(
-            counter,
-            pp.x,
-            pp.z,
-            this.counterRadius,
-            true,
-        );
+        return isActorNearCounterDelivery(pp.x, pp.z, counter, this.counterRadius);
     }
 
     private _findPendingCustomerJuiceOrder() {
