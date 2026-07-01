@@ -35,7 +35,7 @@
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 3281
+      "__id__": 3282
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -66,7 +66,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 3282
+      "__id__": 3283
     },
     "_id": "57b4f1f1-8d76-4cea-8749-52f56b67df18"
   },
@@ -49028,6 +49028,7 @@
     "__type__": "b1281FOBrhPrYgns2TUTDvz",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 3243
     },
@@ -49039,6 +49040,7 @@
     "rewardIconPath": "",
     "grantWorkerCount": 0,
     "grantWorkerVariant": 0,
+    "grantStaffRole": 0,
     "workerSpawnPosition": {
       "__type__": "cc.Vec3",
       "x": 0,
@@ -49062,6 +49064,12 @@
     "orderSubjectId": "",
     "playerNode": null,
     "dimWhenUnaffordable": false,
+    "anchorWorldPosition": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
     "_id": "70TRLbXUdDaIbyTjZcjG29"
   },
   {
@@ -49193,7 +49201,7 @@
     "_priority": 10,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 359.6833773087071,
+    "_orthoHeight": 480,
     "_near": 0.1,
     "_far": 2000,
     "_color": {
@@ -49877,7 +49885,7 @@
     "_string": "0",
     "_horizontalAlign": 2,
     "_verticalAlign": 1,
-    "_actualFontSize": 59.21875,
+    "_actualFontSize": 50,
     "_fontSize": 50,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -50057,7 +50065,7 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 3291
+        "__id__": 3281
       }
     ],
     "_prefab": null,
@@ -50089,6 +50097,65 @@
       "z": 0
     },
     "_id": "d7Id1/dP5MHaNoMI4fXsbE"
+  },
+  {
+    "__type__": "4d8ebIzFZtOKLgrRY5RvXKh",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 3280
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "autoStart": true,
+    "island": {
+      "__id__": 7
+    },
+    "counterDeliveryNode": {
+      "__id__": 1944
+    },
+    "juiceOutputRack": {
+      "__id__": 233
+    },
+    "juiceMachineRig": {
+      "__id__": 219
+    },
+    "counterPurchaseZone": {
+      "__id__": 3243
+    },
+    "spawnPosition": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "protagonistPrefab": null,
+    "workerPurchasePosition": {
+      "__type__": "cc.Vec3",
+      "x": 26,
+      "y": 0,
+      "z": 3.5
+    },
+    "cashierPurchasePosition": {
+      "__type__": "cc.Vec3",
+      "x": 2,
+      "y": 0,
+      "z": -4
+    },
+    "cashierSpawnPosition": {
+      "__type__": "cc.Vec3",
+      "x": -3,
+      "y": 0,
+      "z": 5
+    },
+    "juiceMachinePosition": {
+      "__type__": "cc.Vec3",
+      "x": 26,
+      "y": 0,
+      "z": -10
+    },
+    "_id": "c8qGxVnYdHaNoMI4fXsbF"
   },
   {
     "__type__": "cc.PrefabInfo",
@@ -51099,28 +51166,28 @@
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 3283
-    },
-    "shadows": {
       "__id__": 3284
     },
-    "_skybox": {
+    "shadows": {
       "__id__": 3285
     },
-    "fog": {
+    "_skybox": {
       "__id__": 3286
     },
-    "octree": {
+    "fog": {
       "__id__": 3287
     },
-    "skin": {
+    "octree": {
       "__id__": 3288
     },
-    "lightProbeInfo": {
+    "skin": {
       "__id__": 3289
     },
-    "postSettings": {
+    "lightProbeInfo": {
       "__id__": 3290
+    },
+    "postSettings": {
+      "__id__": 3291
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false
@@ -51280,48 +51347,5 @@
   {
     "__type__": "cc.PostSettingsInfo",
     "_toneMappingType": 0
-  },
-  {
-    "__type__": "4d8ebIzFZtOKLgrRY5RvXKh",
-    "_name": "",
-    "_objFlags": 0,
-    "node": {
-      "__id__": 3280
-    },
-    "_enabled": true,
-    "__prefab": null,
-    "autoStart": true,
-    "spawnPosition": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "protagonistPrefab": null,
-    "workerPurchasePosition": {
-      "__type__": "cc.Vec3",
-      "x": 26,
-      "y": 0,
-      "z": 3.5
-    },
-    "cashierPurchasePosition": {
-      "__type__": "cc.Vec3",
-      "x": 2,
-      "y": 0,
-      "z": -4
-    },
-    "cashierSpawnPosition": {
-      "__type__": "cc.Vec3",
-      "x": -3,
-      "y": 0,
-      "z": 5
-    },
-    "juiceMachinePosition": {
-      "__type__": "cc.Vec3",
-      "x": 26,
-      "y": 0,
-      "z": -10
-    },
-    "_id": "c8qGxVnYdHaNoMI4fXsbF"
   }
 ]

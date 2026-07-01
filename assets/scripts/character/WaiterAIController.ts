@@ -1,7 +1,6 @@
 import {
     _decorator,
     Component,
-    director,
     Node,
     Vec3,
 } from 'cc';
@@ -10,23 +9,11 @@ import { BoundaryNavigator } from '../navigation/BoundaryNavigator';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
 import { resolveCounterDeliveryNode } from '../juice/CounterDeliveryHelper';
+import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 import { WaiterMovementController } from './WaiterMovementController';
 
 const { ccclass, property } = _decorator;
-
-function findChildDeep(root: Node, name: string): Node | null {
-    if (root.name === name) {
-        return root;
-    }
-    for (const child of root.children) {
-        const found = findChildDeep(child, name);
-        if (found) {
-            return found;
-        }
-    }
-    return null;
-}
 
 enum WaiterAIState {
     IdleAtSpawn,
@@ -69,6 +56,7 @@ export class WaiterAIController extends Component {
     start() {
         this._resolveBoundary();
         this._resolveJuiceMachine();
+        this._tray?.bindFromSceneRefs();
         this._tray?.bindJuiceMachine(this.juiceMachine);
         if (this.spawnPosition.lengthSqr() < 1e-6) {
             this.spawnPosition.set(this.node.worldPosition);
@@ -226,15 +214,9 @@ export class WaiterAIController extends Component {
     }
 
     private _getRackNavTarget(out: Vec3): void {
-        const rack = this.juiceMachine?.outputRack;
+        const rack = this.juiceMachine?.outputRack ?? GameSceneRefs.juiceOutputRack;
         if (rack?.isValid) {
             rack.getWorldPosition(out);
-            return;
-        }
-        const island = director.getScene()?.getChildByName('Island');
-        const fallback = island ? findChildDeep(island, 'ZhaLan_Box') : null;
-        if (fallback?.isValid) {
-            fallback.getWorldPosition(out);
             return;
         }
         this.juiceMachine?.node.getWorldPosition(out);
@@ -244,8 +226,7 @@ export class WaiterAIController extends Component {
         if (this._counterNode?.isValid) {
             return this._counterNode;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        const zuozi = resolveCounterDeliveryNode(island);
+        const zuozi = resolveCounterDeliveryNode();
         if (zuozi) {
             this._counterNode = zuozi;
             return zuozi;
@@ -261,8 +242,7 @@ export class WaiterAIController extends Component {
         if (this.boundary?.isValid) {
             return;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        this.boundary = island?.getComponent(PlayAreaBoundary)
+        this.boundary = GameSceneRefs.island?.getComponent(PlayAreaBoundary)
             ?? PlayAreaBoundary.instance;
     }
 
@@ -270,8 +250,6 @@ export class WaiterAIController extends Component {
         if (this.juiceMachine?.isValid) {
             return;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        const zone = island?.getChildByName('JuiceMachineZone');
-        this.juiceMachine = zone?.getComponent(JuiceMachine) ?? null;
+        this.juiceMachine = GameSceneRefs.juiceMachine;
     }
 }

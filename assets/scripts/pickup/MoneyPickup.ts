@@ -8,6 +8,7 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { CurrencyType } from '../currency/CurrencyType';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
+import { GameSceneRefs } from '../scene/GameSceneRefs';
 
 const { ccclass, property } = _decorator;
 
@@ -58,10 +59,7 @@ export class MoneyPickup extends Component {
         if (this.playerNode?.isValid) {
             return this.playerNode;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        this.playerNode = island?.getChildByName('Protagonist')
-            ?? director.getScene()?.getChildByName('Protagonist')
-            ?? null;
+        this.playerNode = GameSceneRefs.protagonist;
         return this.playerNode;
     }
 }

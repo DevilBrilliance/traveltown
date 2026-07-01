@@ -42,16 +42,39 @@ import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
 import { JuiceMachineSetup } from '../juice/JuiceMachineSetup';
+import { GameSceneRefs } from './GameSceneRefs';
 
 const { ccclass, property } = _decorator;
 
 /**
  * 游戏开始入口：挂到场景 `start` 节点，进入场景后自动初始化并创建主角。
+ * 场景节点请在 Inspector 直接绑定，避免运行时按名查找。
  */
 @ccclass('GameStart')
 export class GameStart extends Component {
+    private static _instance: GameStart | null = null;
+
+    public static get instance(): GameStart | null {
+        return GameStart._instance;
+    }
+
     @property({ tooltip: '进入场景后自动开始游戏' })
     autoStart = true;
+
+    @property({ type: Node, tooltip: 'Island 根节点' })
+    island: Node | null = null;
+
+    @property({ type: Node, tooltip: '收银台果汁交付点 ZuoZi' })
+    counterDeliveryNode: Node | null = null;
+
+    @property({ type: Node, tooltip: '场景果汁架 ZhaLan_Box' })
+    juiceOutputRack: Node | null = null;
+
+    @property({ type: Node, tooltip: '榨汁机模型 JiQi_RIG' })
+    juiceMachineRig: Node | null = null;
+
+    @property({ type: Node, tooltip: '收银台解锁购买区 CounterPurchaseZone' })
+    counterPurchaseZone: Node | null = null;
 
     @property({ tooltip: '主角世界坐标生成位置' })
     spawnPosition = new Vec3(0, 0, 0);
@@ -78,6 +101,8 @@ export class GameStart extends Component {
     private _juiceMachine: JuiceMachine | null = null;
 
     onLoad() {
+        GameStart._instance = this;
+        this._publishSceneRefs();
         AudioController.ensure();
         this._ensureCurrencyWallet();
         this._ensureCurrencyDisplay();
@@ -94,9 +119,10 @@ export class GameStart extends Component {
     }
 
     onDestroy() {
-        const island = director.getScene()?.getChildByName('Island');
-        const counterZone = island?.getChildByName('CounterPurchaseZone');
-        counterZone?.off('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
+        if (GameStart._instance === this) {
+            GameStart._instance = null;
+        }
+        this.counterPurchaseZone?.off('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
         this._workerPurchaseZone?.node.off('purchase-zone-ui-closed', this._onWorkerUnlocked, this);
     }
 
@@ -117,9 +143,11 @@ export class GameStart extends Component {
                 const juiceTray = characterNode.addComponent(PlayerJuiceTrayCarrier);
                 characterNode.addComponent(PlayerMovementController);
                 juiceTray.bindJuiceMachine(this._juiceMachine);
+                juiceTray.bindFromSceneRefs();
                 const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
                 bindCameraTouchUI(orbit);
                 this._protagonist = characterNode;
+                GameSceneRefs.protagonist = characterNode;
                 this._onProtagonistReady();
             },
             this.protagonistPrefab,
@@ -127,19 +155,26 @@ export class GameStart extends Component {
     }
 
     private _bindUnlockChain(): void {
-        const island = director.getScene()?.getChildByName('Island');
+        const island = this.island;
         if (!island) {
+            console.warn('[GameStart] 请在 Inspector 绑定 island');
             return;
         }
 
         this._setupWorkerAndCashierZones(island);
-        this._juiceMachine = JuiceMachineSetup.ensureOnIsland(island, this.juiceMachinePosition);
+        this._juiceMachine = JuiceMachineSetup.ensureOnIsland(
+            island,
+            this.juiceMachinePosition,
+            this.juiceMachineRig,
+            this.juiceOutputRack,
+        );
+        GameSceneRefs.juiceMachine = this._juiceMachine;
+        this._publishSceneRefs();
         this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindJuiceMachine(this._juiceMachine);
 
-        const counterZone = island.getChildByName('CounterPurchaseZone');
-        counterZone?.on('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
+        this.counterPurchaseZone?.on('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
 
-        const counterPurchase = counterZone?.getComponent(PurchaseZone);
+        const counterPurchase = this.counterPurchaseZone?.getComponent(PurchaseZone);
         if (counterPurchase?.isPurchased) {
             this._onCashRegisterUnlocked();
         }
@@ -192,6 +227,7 @@ export class GameStart extends Component {
         this._workerPurchaseZone?.activate();
         this._juiceMachine?.activate();
         this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindJuiceMachine(this._juiceMachine);
+        this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindFromSceneRefs();
     }
 
     private _onWorkerUnlocked(): void {
@@ -244,16 +280,35 @@ export class GameStart extends Component {
     }
 
     private _getSpawnParent(): Node {
-        const island = director.getScene()?.getChildByName('Island');
-        if (island) {
-            return island;
+        if (this.island?.isValid) {
+            return this.island;
         }
         // Scene 根节点不能挂组件，角色统一挂在 start 下
         return this.node;
     }
 
+    private _publishSceneRefs(): void {
+        GameSceneRefs.island = this.island;
+        GameSceneRefs.counterDeliveryNode = this.counterDeliveryNode;
+        GameSceneRefs.juiceOutputRack = this.juiceOutputRack;
+        GameSceneRefs.juiceMachineRig = this.juiceMachineRig;
+        GameSceneRefs.counterPurchaseZone = this.counterPurchaseZone;
+        GameSceneRefs.juiceMachine = this._juiceMachine;
+        GameSceneRefs.protagonist = this._protagonist;
+
+        if (!this.counterDeliveryNode) {
+            console.warn('[GameStart] 请在 Inspector 绑定 counterDeliveryNode (ZuoZi)');
+        }
+        if (!this.juiceOutputRack) {
+            console.warn('[GameStart] 请在 Inspector 绑定 juiceOutputRack (ZhaLan_Box)');
+        }
+        if (!this.juiceMachineRig) {
+            console.warn('[GameStart] 请在 Inspector 绑定 juiceMachineRig (JiQi_RIG)');
+        }
+    }
+
     private _ensureFenceBoundary(): PlayAreaBoundary | null {
-        const island = director.getScene()?.getChildByName('Island');
+        const island = this.island;
         if (!island) {
             console.warn('[GameStart] 未找到 Island，无法创建栅栏碰撞');
             return null;
@@ -264,7 +319,7 @@ export class GameStart extends Component {
     }
 
     private _ensureDrawCallOptimizer(): PlayableDrawCallOptimizer | null {
-        const island = director.getScene()?.getChildByName('Island');
+        const island = this.island;
         if (!island) {
             return null;
         }
@@ -273,8 +328,7 @@ export class GameStart extends Component {
     }
 
     private _ensureFruitCollectFields(): void {
-        const island = director.getScene()?.getChildByName('Island');
-        FruitCollectFieldSetup.ensureOnIsland(island);
+        FruitCollectFieldSetup.ensureOnIsland(this.island);
     }
 
     private _ensureCurrencyWallet(): CurrencyWallet {

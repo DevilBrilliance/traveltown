@@ -1,13 +1,13 @@
 import {
     _decorator,
     Component,
-    director,
     Vec3,
 } from 'cc';
 import { BoundaryNavigator } from '../navigation/BoundaryNavigator';
 import { PineappleFieldHelper } from '../fruit/PineappleFieldHelper';
 import { FruitSource } from '../fruit/FruitSource';
 import { JuiceMachine } from '../juice/JuiceMachine';
+import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 import { WorkerFruitCarrier } from './WorkerFruitCarrier';
 import { WorkerMovementController } from './WorkerMovementController';
@@ -436,8 +436,7 @@ export class WorkerAIController extends Component {
         if (this.boundary?.isValid) {
             return;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        this.boundary = island?.getComponent(PlayAreaBoundary)
+        this.boundary = GameSceneRefs.island?.getComponent(PlayAreaBoundary)
             ?? PlayAreaBoundary.instance;
     }
 
@@ -445,8 +444,6 @@ export class WorkerAIController extends Component {
         if (this.juiceMachine?.isValid) {
             return;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        const zone = island?.getChildByName('JuiceMachineZone');
-        this.juiceMachine = zone?.getComponent(JuiceMachine) ?? null;
+        this.juiceMachine = GameSceneRefs.juiceMachine;
     }
 }

@@ -22,6 +22,7 @@ import { WorkerRewardVariant, StaffRole } from '../reward/RewardType';
 import { WorkerGrant } from '../reward/WorkerGrant';
 import { RewardManager } from '../reward/RewardManager';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
+import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { PurchaseZoneView } from './PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from './PurchaseZonePaths';
 
@@ -171,7 +172,7 @@ export class PurchaseZone extends Component {
         if (this.anchorWorldPosition.lengthSqr() < 1e-6) {
             return;
         }
-        const island = director.getScene()?.getChildByName('Island');
+        const island = GameSceneRefs.island;
         const snapped = IslandSurfaceSampler.snapWorldPositionToSurface(
             this.anchorWorldPosition.clone(),
             island,
@@ -356,10 +357,7 @@ export class PurchaseZone extends Component {
         if (this.playerNode?.isValid) {
             return this.playerNode;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        this.playerNode = island?.getChildByName('Protagonist')
-            ?? director.getScene()?.getChildByName('Protagonist')
-            ?? null;
+        this.playerNode = GameSceneRefs.protagonist;
         return this.playerNode;
     }
 

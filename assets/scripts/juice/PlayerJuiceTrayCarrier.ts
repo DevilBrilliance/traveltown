@@ -17,6 +17,7 @@ import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { CurrencyType } from '../currency/CurrencyType';
 import { OrderManager } from '../order/OrderManager';
 import { findPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
+import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { JuiceMachine } from './JuiceMachine';
 import { JUICE_TRAY_DB_PATH, JUICE_TRAY_PREFAB_UUID } from './JuiceMachinePaths';
 import { JuiceRackBounds } from './JuiceRackBounds';
@@ -28,22 +29,6 @@ import {
 
 const { ccclass, property } = _decorator;
 
-function findChildDeep(root: Node, name: string): Node | null {
-    if (root.name === name) {
-        return root;
-    }
-    for (const child of root.children) {
-        const found = findChildDeep(child, name);
-        if (found) {
-            return found;
-        }
-    }
-    return null;
-}
-
-/**
- * 玩家端托盘：进入 ZhaLan_Box 世界 AABB 外扩范围且有果汁时，切换端托盘行为并取杯。
- */
 @ccclass('PlayerJuiceTrayCarrier')
 export class PlayerJuiceTrayCarrier extends Component {
     @property({ type: JuiceMachine, tooltip: '榨汁机，不填则自动查找 JuiceMachineZone' })
@@ -150,6 +135,20 @@ export class PlayerJuiceTrayCarrier extends Component {
         }
     }
 
+    /** 从 GameSceneRefs 同步场景引用（GameStart 绑定后调用） */
+    public bindFromSceneRefs(): void {
+        if (GameSceneRefs.counterDeliveryNode?.isValid) {
+            this.counterNode = GameSceneRefs.counterDeliveryNode;
+        }
+        if (GameSceneRefs.juiceOutputRack?.isValid) {
+            this.juiceRack = GameSceneRefs.juiceOutputRack;
+            this._rackAabbReady = false;
+        }
+        if (GameSceneRefs.juiceMachine?.isValid) {
+            this.bindJuiceMachine(GameSceneRefs.juiceMachine);
+        }
+    }
+
     public setTrayPrefab(prefab: Prefab | null): void {
         if (!prefab) {
             return;
@@ -169,6 +168,7 @@ export class PlayerJuiceTrayCarrier extends Component {
     }
 
     start() {
+        this.bindFromSceneRefs();
         this._resolveJuiceMachine();
         this._resolveRack(this.juiceMachine);
         if (this.trayPrefabRef) {
@@ -397,8 +397,7 @@ export class PlayerJuiceTrayCarrier extends Component {
         if (this.counterNode?.isValid) {
             return this.counterNode;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        const zuozi = resolveCounterDeliveryNode(island);
+        const zuozi = resolveCounterDeliveryNode();
         if (zuozi) {
             this.counterNode = zuozi;
             return zuozi;
@@ -516,9 +515,7 @@ export class PlayerJuiceTrayCarrier extends Component {
         if (this.juiceMachine?.isValid) {
             return this.juiceMachine;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        const zone = island?.getChildByName('JuiceMachineZone');
-        this.juiceMachine = zone?.getComponent(JuiceMachine) ?? null;
+        this.juiceMachine = GameSceneRefs.juiceMachine;
         return this.juiceMachine;
     }
 
@@ -531,12 +528,12 @@ export class PlayerJuiceTrayCarrier extends Component {
             this._rackAabbReady = false;
             return this.juiceRack;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        this.juiceRack = island ? findChildDeep(island, 'ZhaLan_Box') : null;
-        if (this.juiceRack) {
+        if (GameSceneRefs.juiceOutputRack?.isValid) {
+            this.juiceRack = GameSceneRefs.juiceOutputRack;
             this._rackAabbReady = false;
+            return this.juiceRack;
         }
-        return this.juiceRack;
+        return null;
     }
 
     private _ensureRackAabb(rack: Node): boolean {

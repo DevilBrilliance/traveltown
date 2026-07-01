@@ -16,6 +16,7 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
+import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { PurchaseZoneView } from '../purchase/PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from '../purchase/PurchaseZonePaths';
 import { JuiceMachineAnimator } from './JuiceMachineAnimator';
@@ -24,19 +25,6 @@ import {
     JUICE_GLASS_PREFAB_UUID,
     JUICE_MACHINE_PINEAPPLE_ICON_PATH,
 } from './JuiceMachinePaths';
-
-function findChildDeep(root: Node, name: string): Node | null {
-    if (root.name === name) {
-        return root;
-    }
-    for (const child of root.children) {
-        const found = findChildDeep(child, name);
-        if (found) {
-            return found;
-        }
-    }
-    return null;
-}
 
 const { ccclass, property } = _decorator;
 
@@ -103,11 +91,11 @@ export class JuiceMachine extends Component {
     private readonly _glassPos = new Vec3();
 
     onLoad() {
-        if (!this.machineRef) {
-            const island = director.getScene()?.getChildByName('Island');
-            if (island) {
-                this.machineRef = findChildDeep(island, 'JiQi_RIG');
-            }
+        if (!this.machineRef?.isValid) {
+            this.machineRef = GameSceneRefs.juiceMachineRig;
+        }
+        if (!this.outputRack?.isValid) {
+            this.outputRack = GameSceneRefs.juiceOutputRack;
         }
     }
 
@@ -242,7 +230,7 @@ export class JuiceMachine extends Component {
     }
 
     private _snapToFloorSurface(): void {
-        const island = director.getScene()?.getChildByName('Island');
+        const island = GameSceneRefs.island;
         const pos = this.node.worldPosition.clone();
         IslandSurfaceSampler.snapWorldPositionToSurface(pos, island, 0, pos);
         this.node.setWorldPosition(pos);
@@ -461,10 +449,7 @@ export class JuiceMachine extends Component {
         if (this.playerNode?.isValid) {
             return this.playerNode;
         }
-        const island = director.getScene()?.getChildByName('Island');
-        this.playerNode = island?.getChildByName('Protagonist')
-            ?? director.getScene()?.getChildByName('Protagonist')
-            ?? null;
+        this.playerNode = GameSceneRefs.protagonist;
         return this.playerNode;
     }
 }
