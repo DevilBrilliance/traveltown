@@ -1,6 +1,7 @@
 import {
     _decorator,
     AnimationClip,
+    AnimationState,
     assetManager,
     Component,
     Enum,
@@ -38,6 +39,7 @@ export class CharacterAnimController extends Component {
     private _skeletal: SkeletalAnimation | null = null;
     private _currentState: CharacterAnimState | null = null;
     private _started = false;
+    private _onceFinishCallback: (() => void) | null = null;
 
     public get currentState(): CharacterAnimState | null {
         return this._currentState;
@@ -58,7 +60,9 @@ export class CharacterAnimController extends Component {
     }
 
     onDestroy() {
-        this.node.off('appearance-changed', this._onAppearanceChanged, this);
+        this.unschedule(this._invokeOnceFinish);
+        this._onceFinishCallback = null;
+        this.node?.off('appearance-changed', this._onAppearanceChanged, this);
     }
 
     /** 在指定角色节点上播放动画 */
@@ -84,16 +88,54 @@ export class CharacterAnimController extends Component {
             if (!clip || !this.isValid || !this._skeletal) {
                 return;
             }
-            this._playClip(state, clip);
+            this._playClip(state, clip, AnimationClip.WrapMode.Loop);
         });
     }
 
-    private _playClip(state: CharacterAnimState, clip: AnimationClip): void {
+    /** 播放一次动画，结束后回调 */
+    public playOnce(state: CharacterAnimState, onFinished?: () => void): void {
+        this.unschedule(this._invokeOnceFinish);
+        this._onceFinishCallback = onFinished ?? null;
+
+        this._ensureSkeletalAnimation();
+        if (!this._skeletal) {
+            this._invokeOnceFinish();
+            return;
+        }
+
+        CharacterAnimController._loadClip(state, (clip) => {
+            if (!clip || !this.isValid || !this._skeletal) {
+                this._invokeOnceFinish();
+                return;
+            }
+            const animState = this._playClip(state, clip, AnimationClip.WrapMode.Normal);
+            const speed = Math.max(animState?.speed ?? 1, 0.01);
+            this.scheduleOnce(this._invokeOnceFinish, clip.duration / speed);
+        });
+    }
+
+    private _invokeOnceFinish = (): void => {
+        const cb = this._onceFinishCallback;
+        this._onceFinishCallback = null;
+        cb?.();
+    };
+
+    private _playClip(
+        state: CharacterAnimState,
+        clip: AnimationClip,
+        wrapMode: AnimationClip.WrapMode,
+    ): AnimationState | null {
         const skeletal = this._skeletal!;
         const clipName = CharacterAnimState[state];
 
         if (!skeletal.getState(clipName)) {
             skeletal.addClip(clip, clipName);
+        }
+
+        const animState = skeletal.getState(clipName);
+        if (animState) {
+            animState.wrapMode = wrapMode;
+            animState.repeatCount = wrapMode === AnimationClip.WrapMode.Loop ? Infinity : 1;
         }
 
         if (this._currentState === null || this.crossFadeDuration <= 0) {
@@ -103,6 +145,7 @@ export class CharacterAnimController extends Component {
         }
 
         this._currentState = state;
+        return animState;
     }
 
     private _ensureSkeletalAnimation(): void {
@@ -143,6 +186,13 @@ export class CharacterAnimController extends Component {
     }
 
     private static _loadClip(state: CharacterAnimState, onLoaded: ClipCallback): void {
+        if (!CharacterAnimController._clipCache) {
+            CharacterAnimController._clipCache = new Map();
+        }
+        if (!CharacterAnimController._loadingCallbacks) {
+            CharacterAnimController._loadingCallbacks = new Map();
+        }
+
         const cached = CharacterAnimController._clipCache.get(state);
         if (cached) {
             onLoaded(cached);

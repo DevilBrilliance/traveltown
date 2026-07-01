@@ -16,6 +16,10 @@ import { AudioController } from '../audio/AudioController';
 
 import { SoundEffect } from '../audio/SoundEffect';
 
+import { AppearanceController } from '../character/AppearanceController';
+
+import { CharacterAnimController } from '../character/CharacterAnimController';
+
 import { CharacterAnimState } from '../character/CharacterAnimState';
 
 import { FruitCollectZone } from './FruitCollectZone';
@@ -42,7 +46,7 @@ export class PlayerFruitCarrier extends Component {
 
     @property({ tooltip: '背上最多同时携带的水果数量' })
 
-    maxCarryCount = 3;
+    maxCarryCount = 10;
 
 
 
@@ -111,6 +115,8 @@ export class PlayerFruitCarrier extends Component {
     private _carriedTypes: FruitType[] = [];
 
     private _collectCooldown = 0;
+    private _isHarvesting = false;
+    private _pendingHarvestSource: FruitSource | null = null;
 
     private readonly _worldPos = new Vec3();
 
@@ -140,6 +146,22 @@ export class PlayerFruitCarrier extends Component {
 
 
 
+    onDestroy() {
+
+        this._pendingHarvestSource = null;
+
+        this._isHarvesting = false;
+
+        if (this.node?.isValid) {
+
+            this.node.getComponent(AppearanceController)?.disableSickle();
+
+        }
+
+    }
+
+
+
     update(dt: number) {
 
         this._updateCarryMount();
@@ -152,7 +174,7 @@ export class PlayerFruitCarrier extends Component {
 
         }
 
-        if (this.isFull || this._collectCooldown > 0) {
+        if (this._isHarvesting || this.isFull || this._collectCooldown > 0) {
 
             return;
 
@@ -164,17 +186,39 @@ export class PlayerFruitCarrier extends Component {
 
         const source = this._findNearestCollectible(this._worldPos);
 
-        if (source) {
+        if (!source) {
 
-            this._collect(source);
+            return;
 
         }
+
+        if (source.fruitType === FruitType.Pineapple) {
+
+            this._startPineappleHarvest(source);
+
+            return;
+
+        }
+
+        this._collect(source);
 
     }
 
 
 
-    public getLocomotionAnimState(_moving: boolean): CharacterAnimState | null {
+    public getLocomotionAnimState(moving: boolean): CharacterAnimState | null {
+
+        if (this._isHarvesting) {
+
+            return CharacterAnimState.Harvest;
+
+        }
+
+        if (this.carriedCount > 0) {
+
+            return moving ? CharacterAnimState.PlateRun : CharacterAnimState.PlateIdle;
+
+        }
 
         return null;
 
@@ -317,6 +361,70 @@ export class PlayerFruitCarrier extends Component {
         }
 
         return best;
+
+    }
+
+
+
+    private _startPineappleHarvest(source: FruitSource): void {
+
+        if (this._isHarvesting || !source.isAvailable) {
+
+            return;
+
+        }
+
+        this._isHarvesting = true;
+
+        this._pendingHarvestSource = source;
+
+        this.node.getComponent(AppearanceController)?.enableSickle();
+
+        this.node.emit('fruit-harvest-started');
+
+        const anim = this.node.getComponent(CharacterAnimController);
+
+        if (!anim) {
+
+            this._finishPineappleHarvest();
+
+            return;
+
+        }
+
+        anim.playOnce(CharacterAnimState.Harvest, () => {
+
+            this._finishPineappleHarvest();
+
+        });
+
+    }
+
+
+
+    private _finishPineappleHarvest(): void {
+
+        const source = this._pendingHarvestSource;
+
+        this._pendingHarvestSource = null;
+
+        this._isHarvesting = false;
+
+        if (!this.node?.isValid) {
+
+            return;
+
+        }
+
+        this.node.getComponent(AppearanceController)?.disableSickle();
+
+        if (source?.isAvailable) {
+
+            this._collect(source);
+
+        }
+
+        this.node.emit('fruit-collect-anim-finished');
 
     }
 

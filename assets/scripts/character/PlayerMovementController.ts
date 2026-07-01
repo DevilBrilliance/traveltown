@@ -72,11 +72,16 @@ export class PlayerMovementController extends Component {
             this.fruitCarrier = this.getComponent(PlayerFruitCarrier);
         }
         this.node.on('fruit-collect-anim-finished', this._refreshLocomotionAnim, this);
+        this.node.on('fruit-harvest-started', this._refreshLocomotionAnim, this);
         this.node.on('fruit-carry-changed', this._refreshLocomotionAnim, this);
     }
 
     onDestroy() {
+        if (!this.node?.isValid) {
+            return;
+        }
         this.node.off('fruit-collect-anim-finished', this._refreshLocomotionAnim, this);
+        this.node.off('fruit-harvest-started', this._refreshLocomotionAnim, this);
         this.node.off('fruit-carry-changed', this._refreshLocomotionAnim, this);
         if (this._isMoving && this.runSoundEnabled) {
             AudioController.instance?.stopLoop();

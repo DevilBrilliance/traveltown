@@ -198,6 +198,9 @@ export class SpeechBubbleManager extends Component {
     }
 
     public hideAll(): void {
+        if (!this._bubbles) {
+            return;
+        }
         for (const id of [...this._bubbles.keys()]) {
             this.hide(id);
         }
