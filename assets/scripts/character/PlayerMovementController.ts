@@ -40,7 +40,7 @@ export class PlayerMovementController extends Component {
     @property({ tooltip: '跑步音效相对音量' })
     runSoundVolume = 1;
 
-    @property({ type: PlayAreaBoundary, tooltip: '沙滩边界，不填则自动查找' })
+    @property({ type: PlayAreaBoundary, tooltip: '栅栏碰撞，不填则自动查找' })
     boundary: PlayAreaBoundary | null = null;
 
     private _anim: CharacterAnimController | null = null;

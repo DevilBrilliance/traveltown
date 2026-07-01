@@ -2,7 +2,6 @@ import {
     _decorator,
     Component,
     director,
-    geometry,
     Material,
     MeshRenderer,
     Node,
@@ -47,7 +46,6 @@ export class PlayableDrawCallOptimizer extends Component {
     @property({ tooltip: '优化完成后打印统计' })
     logStats = true;
 
-    private readonly _tmpAabb = new geometry.AABB();
     private readonly _instancingMaterials = new Set<Material>();
     private _batchRoot: Node | null = null;
 
@@ -67,6 +65,7 @@ export class PlayableDrawCallOptimizer extends Component {
 
         const before = this._countEnabledMeshRenderers(island);
 
+        PlayAreaBoundary.instance?.rebuild();
         this._hideGroups(island);
         const batchStats = this._runStaticBatch(island);
         this._cullMeshRenderers(island);
@@ -121,38 +120,9 @@ export class PlayableDrawCallOptimizer extends Component {
         }
     }
 
-    private _cullMeshRenderers(island: Node): void {
+    private _cullMeshRenderers(_island: Node): void {
         if (!this.cullOutsidePlayArea) {
             return;
-        }
-
-        const boundary = PlayAreaBoundary.instance
-            ?? island.getComponent(PlayAreaBoundary)
-            ?? director.getScene()?.getComponentInChildren(PlayAreaBoundary);
-        const b = boundary?.getPlayRect();
-        if (!b) {
-            return;
-        }
-
-        const minX = b.minX - this.playAreaPadding;
-        const maxX = b.maxX + this.playAreaPadding;
-        const minZ = b.minZ - this.playAreaPadding;
-        const maxZ = b.maxZ + this.playAreaPadding;
-
-        for (const renderer of island.getComponentsInChildren(MeshRenderer)) {
-            if (!renderer.enabled || !renderer.node.activeInHierarchy) {
-                continue;
-            }
-            const model = renderer.model;
-            if (!model?.worldBounds) {
-                continue;
-            }
-            geometry.AABB.copy(this._tmpAabb, model.worldBounds);
-            const cx = this._tmpAabb.center.x;
-            const cz = this._tmpAabb.center.z;
-            if (cx < minX || cx > maxX || cz < minZ || cz > maxZ) {
-                renderer.enabled = false;
-            }
         }
     }
 

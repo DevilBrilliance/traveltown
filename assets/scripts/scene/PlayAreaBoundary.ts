@@ -3,6 +3,7 @@ import {
     Component,
     director,
     geometry,
+    math,
     Mat4,
     Mesh,
     MeshRenderer,
@@ -12,20 +13,17 @@ import {
 
 const { ccclass, property } = _decorator;
 
-const AREA_ROOT_NAMES = ['Sand', 'ShaTan', 'shatan'];
+const DEFAULT_FENCE_ROOT_NAMES = ['zhalan'] as const;
+const FENCE_NODE_NAME = /^zhalan|ZhaLan/i;
+
+interface FenceAabb {
+    center: Vec3;
+    halfExtents: Vec3;
+}
 
 /**
- * ShaTan 网格 bounds（Sand scale=1.35, pos=0）反算的世界 XZ 范围：
- * mesh x∈[-8.87, 56.66], y∈[-31.82, 16.84]，子节点 ShaTan 绕 X 转 -90°
- * → world X∈[-11.98, 76.49], Z∈[-22.73, 42.96]
- */
-const BAKED_SHA_TAN_MIN_X = -12;
-const BAKED_SHA_TAN_MAX_X = 76.5;
-const BAKED_SHA_TAN_MIN_Z = -22.7;
-const BAKED_SHA_TAN_MAX_Z = 43;
-
-/**
- * 沙滩可玩区域边界（纯代码 clamp，无物理碰撞体）。
+ * 栅栏碰撞：收集 Island 下所有栅栏模型的世界 AABB，阻挡玩家穿过。
+ * 不再使用沙滩矩形空气墙。
  */
 @ccclass('PlayAreaBoundary')
 export class PlayAreaBoundary extends Component {
@@ -35,48 +33,35 @@ export class PlayAreaBoundary extends Component {
         return PlayAreaBoundary._instance;
     }
 
-    @property({ tooltip: '手动指定边界（Playable 打包时可勾选并沿用下方数值）' })
-    useManualBounds = false;
+    @property({ type: Node, tooltip: '栅栏分组根节点，不填则查找 Island/zhalan' })
+    fenceRoot: Node | null = null;
 
-    @property({ tooltip: '可玩区 X 最小值（世界坐标）' })
-    manualMinX = BAKED_SHA_TAN_MIN_X;
+    @property({ type: [String], tooltip: '栅栏分组节点名（Island 下）' })
+    fenceGroupNames: string[] = [...DEFAULT_FENCE_ROOT_NAMES];
 
-    @property({ tooltip: '可玩区 X 最大值（世界坐标）' })
-    manualMaxX = BAKED_SHA_TAN_MAX_X;
+    @property({ tooltip: '是否扫描 Island 下所有名称含 ZhaLan 的节点' })
+    scanZhaLanNodes = true;
 
-    @property({ tooltip: '可玩区 Z 最小值（世界坐标）' })
-    manualMinZ = BAKED_SHA_TAN_MIN_Z;
-
-    @property({ tooltip: '可玩区 Z 最大值（世界坐标）' })
-    manualMaxZ = BAKED_SHA_TAN_MAX_Z;
-
-    @property({ type: Node, tooltip: '自动模式：沙滩根节点，不填则查找 Sand / ShaTan' })
-    areaRoot: Node | null = null;
-
-    @property({ tooltip: '自动模式：从网格 AABB 向内缩进' })
-    margin = 0.6;
-
-    @property({ tooltip: '玩家半径，clamp 时留边' })
+    @property({ tooltip: '玩家碰撞半径' })
     playerRadius = 0.45;
 
-    @property({ tooltip: '就绪后在控制台打印边界（调试用）' })
+    @property({ tooltip: 'AABB 向外扩展，避免贴模型太紧' })
+    fencePadding = 0.05;
+
+    @property({ tooltip: '就绪后在控制台打印栅栏数量（调试用）' })
     logBoundsOnReady = false;
 
-    private readonly _worldAabb = new geometry.AABB();
     private readonly _tmpAabb = new geometry.AABB();
     private readonly _worldMat = new Mat4();
     private readonly _corner = new Vec3();
     private readonly _worldCorner = new Vec3();
-    private _minX = 0;
-    private _maxX = 0;
-    private _minZ = 0;
-    private _maxZ = 0;
+    private readonly _fenceAabbs: FenceAabb[] = [];
     private _ready = false;
     private _rebuildAttempts = 0;
 
     onLoad() {
         PlayAreaBoundary._instance = this;
-        this._resolveAreaRoot();
+        this._resolveFenceRoot();
     }
 
     start() {
@@ -90,131 +75,157 @@ export class PlayAreaBoundary extends Component {
     }
 
     public rebuild(): void {
-        if (this.useManualBounds) {
-            this._applyManualBounds();
-            this._logBounds('manual');
-            return;
-        }
+        this._fenceAabbs.length = 0;
+        this._resolveFenceRoot();
 
-        this._resolveAreaRoot();
-        if (!this.areaRoot?.isValid) {
-            console.warn('[PlayAreaBoundary] 未找到沙滩节点（Sand / ShaTan）');
+        const island = director.getScene()?.getChildByName('Island');
+        if (!island?.isValid) {
+            console.warn('[PlayAreaBoundary] 未找到 Island');
             this._ready = false;
             return;
         }
 
-        if (!this._collectWorldAabb(this.areaRoot, this._worldAabb)) {
+        const seen = new Set<MeshRenderer>();
+        this._collectFenceRenderers(island, seen);
+
+        for (const renderer of seen) {
+            if (!renderer.node.activeInHierarchy) {
+                continue;
+            }
+            if (!this._readWorldAabb(renderer, this._tmpAabb)) {
+                continue;
+            }
+            const pad = this.fencePadding;
+            this._fenceAabbs.push({
+                center: this._tmpAabb.center.clone(),
+                halfExtents: new Vec3(
+                    this._tmpAabb.halfExtents.x + pad,
+                    this._tmpAabb.halfExtents.y + pad,
+                    this._tmpAabb.halfExtents.z + pad,
+                ),
+            });
+        }
+
+        if (this._fenceAabbs.length === 0) {
             this._rebuildAttempts += 1;
-            if (this._rebuildAttempts <= 5) {
+            if (this._rebuildAttempts <= 8) {
                 this.scheduleOnce(() => this.rebuild(), 0.1);
             } else {
-                console.warn('[PlayAreaBoundary] 无法读取沙滩网格，回退到烘焙边界');
-                this.useManualBounds = true;
-                this._applyManualBounds();
-                this._logBounds('baked-fallback');
+                console.warn('[PlayAreaBoundary] 未收集到栅栏 AABB');
+                this._ready = false;
             }
             return;
         }
 
-        const { center, halfExtents } = this._worldAabb;
-        this._minX = center.x - halfExtents.x + this.margin;
-        this._maxX = center.x + halfExtents.x - this.margin;
-        this._minZ = center.z - halfExtents.z + this.margin;
-        this._maxZ = center.z + halfExtents.z - this.margin;
-        if (this._validateBounds()) {
-            this._logBounds('auto');
+        this._ready = true;
+        if (this.logBoundsOnReady) {
+            console.log(`[PlayAreaBoundary] 栅栏碰撞体 ${this._fenceAabbs.length} 个`);
         }
     }
 
-    /** 供裁剪优化使用的可玩区 XZ 矩形（不含 playerRadius） */
-    public getPlayRect(): { minX: number; maxX: number; minZ: number; maxZ: number } | null {
-        if (!this._ready) {
-            return null;
-        }
-        return {
-            minX: this._minX,
-            maxX: this._maxX,
-            minZ: this._minZ,
-            maxZ: this._maxZ,
-        };
-    }
-
-    /** 将世界坐标限制在沙滩可玩区域内 */
+    /** 将世界坐标推出栅栏 AABB（XZ 平面圆形碰撞） */
     public clampWorldPosition(pos: Vec3): void {
         if (!this._ready) {
             return;
         }
+
         const r = this.playerRadius;
-        const minX = this._minX + r;
-        const maxX = this._maxX - r;
-        const minZ = this._minZ + r;
-        const maxZ = this._maxZ - r;
-        if (pos.x < minX) {
-            pos.x = minX;
-        } else if (pos.x > maxX) {
-            pos.x = maxX;
-        }
-        if (pos.z < minZ) {
-            pos.z = minZ;
-        } else if (pos.z > maxZ) {
-            pos.z = maxZ;
+        for (let pass = 0; pass < 3; pass += 1) {
+            for (const box of this._fenceAabbs) {
+                this._resolveCircleAabbXZ(pos, r, box);
+            }
         }
     }
 
-    private _applyManualBounds(): void {
-        this._minX = this.manualMinX;
-        this._maxX = this.manualMaxX;
-        this._minZ = this.manualMinZ;
-        this._maxZ = this.manualMaxZ;
-        this._validateBounds();
-    }
-
-    private _validateBounds(): boolean {
-        if (this._minX >= this._maxX || this._minZ >= this._maxZ) {
-            console.warn('[PlayAreaBoundary] 边界无效');
-            this._ready = false;
-            return false;
+    private _collectFenceRenderers(island: Node, seen: Set<MeshRenderer>): void {
+        for (const groupName of this.fenceGroupNames) {
+            const group = island.getChildByName(groupName) ?? this._findChildByName(island, groupName);
+            if (group?.isValid) {
+                for (const renderer of group.getComponentsInChildren(MeshRenderer)) {
+                    seen.add(renderer);
+                }
+            }
         }
-        this._ready = true;
-        return true;
-    }
 
-    private _logBounds(source: string): void {
-        if (!this.logBoundsOnReady || !this._ready) {
+        if (!this.scanZhaLanNodes) {
             return;
         }
-        console.log(
-            `[PlayAreaBoundary] ${source} X[${this._minX.toFixed(2)}, ${this._maxX.toFixed(2)}]`
-            + ` Z[${this._minZ.toFixed(2)}, ${this._maxZ.toFixed(2)}] margin=${this.margin}`,
-        );
+
+        this._collectZhaLanRenderers(island, seen);
     }
 
-    private _resolveAreaRoot(): void {
-        if (this.areaRoot?.isValid) {
+    private _collectZhaLanRenderers(root: Node, seen: Set<MeshRenderer>): void {
+        if (FENCE_NODE_NAME.test(root.name)) {
+            const renderer = root.getComponent(MeshRenderer);
+            if (renderer) {
+                seen.add(renderer);
+            }
+            for (const renderer of root.getComponentsInChildren(MeshRenderer)) {
+                seen.add(renderer);
+            }
+        }
+
+        for (const child of root.children) {
+            this._collectZhaLanRenderers(child, seen);
+        }
+    }
+
+    private _resolveCircleAabbXZ(pos: Vec3, radius: number, box: FenceAabb): void {
+        const minX = box.center.x - box.halfExtents.x;
+        const maxX = box.center.x + box.halfExtents.x;
+        const minZ = box.center.z - box.halfExtents.z;
+        const maxZ = box.center.z + box.halfExtents.z;
+
+        const closestX = math.clamp(pos.x, minX, maxX);
+        const closestZ = math.clamp(pos.z, minZ, maxZ);
+        const dx = pos.x - closestX;
+        const dz = pos.z - closestZ;
+        const distSq = dx * dx + dz * dz;
+        const rSq = radius * radius;
+
+        if (distSq >= rSq) {
+            return;
+        }
+
+        if (distSq < 1e-8) {
+            const penLeft = pos.x - minX;
+            const penRight = maxX - pos.x;
+            const penBottom = pos.z - minZ;
+            const penTop = maxZ - pos.z;
+            const minPen = Math.min(penLeft, penRight, penBottom, penTop);
+            if (minPen === penLeft) {
+                pos.x = minX - radius;
+            } else if (minPen === penRight) {
+                pos.x = maxX + radius;
+            } else if (minPen === penBottom) {
+                pos.z = minZ - radius;
+            } else {
+                pos.z = maxZ + radius;
+            }
+            return;
+        }
+
+        const dist = Math.sqrt(distSq);
+        const push = radius - dist;
+        pos.x += (dx / dist) * push;
+        pos.z += (dz / dist) * push;
+    }
+
+    private _resolveFenceRoot(): void {
+        if (this.fenceRoot?.isValid) {
             return;
         }
         const island = director.getScene()?.getChildByName('Island');
         if (!island) {
             return;
         }
-        for (const name of AREA_ROOT_NAMES) {
+        for (const name of this.fenceGroupNames) {
             const node = island.getChildByName(name);
             if (node?.isValid) {
-                this.areaRoot = node;
+                this.fenceRoot = node;
                 return;
             }
         }
-        this.areaRoot = this._findByNameDeep(island, AREA_ROOT_NAMES);
-    }
-
-    private _findByNameDeep(root: Node, names: readonly string[]): Node | null {
-        for (const name of names) {
-            const found = this._findChildByName(root, name);
-            if (found) {
-                return found;
-            }
-        }
-        return null;
     }
 
     private _findChildByName(root: Node, name: string): Node | null {
@@ -230,28 +241,15 @@ export class PlayAreaBoundary extends Component {
         return null;
     }
 
-    private _collectWorldAabb(root: Node, out: geometry.AABB): boolean {
-        let merged = false;
-        const renderers = root.getComponentsInChildren(MeshRenderer);
-        for (const renderer of renderers) {
-            const model = renderer.model;
-            if (model?.worldBounds) {
-                geometry.AABB.copy(this._tmpAabb, model.worldBounds);
-            } else if (!this._collectFromMeshStruct(renderer, this._tmpAabb)) {
-                continue;
-            }
-
-            if (!merged) {
-                geometry.AABB.copy(out, this._tmpAabb);
-                merged = true;
-            } else {
-                geometry.AABB.merge(out, out, this._tmpAabb);
-            }
+    private _readWorldAabb(renderer: MeshRenderer, out: geometry.AABB): boolean {
+        const model = renderer.model;
+        if (model?.worldBounds) {
+            geometry.AABB.copy(out, model.worldBounds);
+            return true;
         }
-        return merged;
+        return this._collectFromMeshStruct(renderer, out);
     }
 
-    /** model.worldBounds 未就绪时，用 mesh.struct + 世界矩阵计算 */
     private _collectFromMeshStruct(renderer: MeshRenderer, out: geometry.AABB): boolean {
         const mesh = renderer.mesh as Mesh | null;
         const min = mesh?.struct?.minPosition;
@@ -269,9 +267,9 @@ export class PlayAreaBoundary extends Component {
         let maxY = -Infinity;
         let maxZ = -Infinity;
 
-        for (let xi = 0; xi < 2; xi++) {
-            for (let yi = 0; yi < 2; yi++) {
-                for (let zi = 0; zi < 2; zi++) {
+        for (let xi = 0; xi < 2; xi += 1) {
+            for (let yi = 0; yi < 2; yi += 1) {
+                for (let zi = 0; zi < 2; zi += 1) {
                     this._corner.set(
                         xi ? max.x : min.x,
                         yi ? max.y : min.y,

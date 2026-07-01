@@ -51,7 +51,7 @@ export class GameStart extends Component {
         this._ensureOrderManager();
         this._ensureRewardManager();
         this._ensureSpeechBubbleSystem();
-        this._ensurePlayAreaBoundary();
+        this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
         if (this.autoStart) {
             this.startGame();
@@ -106,13 +106,15 @@ export class GameStart extends Component {
         return this.node;
     }
 
-    private _ensurePlayAreaBoundary(): PlayAreaBoundary | null {
+    private _ensureFenceBoundary(): PlayAreaBoundary | null {
         const island = director.getScene()?.getChildByName('Island');
         if (!island) {
-            console.warn('[GameStart] 未找到 Island，无法创建沙滩边界');
+            console.warn('[GameStart] 未找到 Island，无法创建栅栏碰撞');
             return null;
         }
-        return island.getComponent(PlayAreaBoundary) ?? island.addComponent(PlayAreaBoundary);
+        const boundary = island.getComponent(PlayAreaBoundary) ?? island.addComponent(PlayAreaBoundary);
+        boundary.rebuild();
+        return boundary;
     }
 
     private _ensureDrawCallOptimizer(): PlayableDrawCallOptimizer | null {
