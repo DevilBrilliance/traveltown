@@ -76,6 +76,9 @@ export class FruitCollectFieldSetup extends Component {
         const setup = fieldNode.getComponent(FruitCollectFieldSetup)
             ?? fieldNode.addComponent(FruitCollectFieldSetup);
         setup.fruitType = fruitType;
+        if (fruitType === FruitType.Pineapple) {
+            setup.collectRadius = 2;
+        }
         setup.apply();
     }
 }

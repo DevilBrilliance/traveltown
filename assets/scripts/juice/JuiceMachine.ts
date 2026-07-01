@@ -40,15 +40,15 @@ function findChildDeep(root: Node, name: string): Node | null {
 const { ccclass, property } = _decorator;
 
 /**
- * 榨汁机：玩家投菠萝（最多 20），UI 常驻；有料时运行并每 2 秒产一杯汁到 ZhaLan_Box。
+ * 榨汁机：玩家投菠萝（最多 24），UI 常驻；有料时运行并每 2 秒产一杯汁到 ZhaLan_Box。
  */
 @ccclass('JuiceMachine')
 export class JuiceMachine extends Component {
     @property({ tooltip: '机器内菠萝容量' })
-    bufferCapacity = 20;
+    bufferCapacity = 24;
 
     @property({ tooltip: '栅栏区最多放置杯数' })
-    maxGlassCount = 30;
+    maxGlassCount = 24;
 
     @property({ tooltip: '产出间隔（秒）' })
     produceInterval = 2;
@@ -56,7 +56,7 @@ export class JuiceMachine extends Component {
     @property({ type: Node, tooltip: '果汁杯摆放父节点（ZhaLan_Box）' })
     outputRack: Node | null = null;
 
-    @property({ type: Node, tooltip: '机器参考点（用于判断摆放朝向，默认 JiQi_RIG）' })
+    @property({ type: Node, tooltip: '机器参考点（用于运行动画，默认 JiQi_RIG）' })
     machineRef: Node | null = null;
 
     @property({ tooltip: '贴地 Y 偏移（在底板顶面之上）' })
@@ -71,20 +71,17 @@ export class JuiceMachine extends Component {
     @property({ tooltip: '投料速度（个/秒）' })
     depositPerSecond = 8;
 
-    @property({ tooltip: '每行杯数（从靠近机器一侧起排）' })
-    rackCols = 6;
+    @property({ tooltip: '首角世界坐标（第 1 列第 1 行，X 大 / Z 小）' })
+    rackStartWorld = new Vec3(3.3, -0.78, -4);
 
-    @property({ tooltip: '杯间距 X（世界单位）' })
-    rackSpacingX = 0.55;
+    @property({ tooltip: '末角世界坐标（最后一列最后一行，X 小 / Z 大）' })
+    rackEndWorld = new Vec3(-1.6, -0.78, -0.78);
 
-    @property({ tooltip: '杯间距 Z（世界单位）' })
-    rackSpacingZ = 0.55;
+    @property({ tooltip: 'X 方向列数' })
+    rackColsX = 6;
 
-    @property({ tooltip: '摆放面高度（相对 outputRack 本地 Y）' })
-    rackSurfaceY = 0.35;
-
-    @property({ tooltip: '靠近机器一侧起点偏移（沿机器方向，世界单位）' })
-    rackStartOffset = 1.1;
+    @property({ tooltip: 'Z 方向行数（先沿 Z 排满一行再换列）' })
+    rackRowsZ = 4;
 
     @property({ type: Node, tooltip: '玩家节点，不填则查找 Protagonist' })
     playerNode: Node | null = null;
@@ -99,9 +96,6 @@ export class JuiceMachine extends Component {
     private _glassPrefab: Prefab | null = null;
     private _glassRoot: Node | null = null;
 
-    private readonly _rackOrigin = new Vec3();
-    private readonly _towardMachine = new Vec3();
-    private readonly _perpDir = new Vec3();
     private readonly _glassPos = new Vec3();
 
     onLoad() {
@@ -254,47 +248,28 @@ export class JuiceMachine extends Component {
         }
 
         const index = this._glassCount;
-        const col = index % this.rackCols;
-        const row = Math.floor(index / this.rackCols);
-        const rowsCount = Math.ceil(this.maxGlassCount / this.rackCols);
-        const rowOffset = row - (rowsCount - 1) * 0.5;
-
-        this._computeRackBasis();
-        Vec3.scaleAndAdd(this._glassPos, this._rackOrigin, this._towardMachine, -col * this.rackSpacingX);
-        Vec3.scaleAndAdd(this._glassPos, this._glassPos, this._perpDir, rowOffset * this.rackSpacingZ);
+        this._computeGlassWorldPosition(index, this._glassPos);
 
         const glass = instantiate(this._glassPrefab);
         glass.name = `JuiceGlass_${index}`;
         glass.setParent(this._glassRoot);
         glass.setWorldPosition(this._glassPos);
-        glass.setWorldRotation(this._glassRoot.worldRotation);
 
         AudioController.ensure().play(SoundEffect.PourJuice);
 
         this._glassCount++;
     }
 
-    private _computeRackBasis(): void {
-        const rack = this.outputRack ?? this._glassRoot;
-        const machine = this.machineRef ?? this.node;
-        if (!rack?.isValid || !machine?.isValid) {
-            return;
-        }
+    /** 6×4 棋盘：先沿 Z 递增排 rackRowsZ 杯，再 X 换列 */
+    private _computeGlassWorldPosition(index: number, out: Vec3): void {
+        const col = Math.floor(index / this.rackRowsZ);
+        const row = index % this.rackRowsZ;
+        const colT = this.rackColsX > 1 ? col / (this.rackColsX - 1) : 0;
+        const rowT = this.rackRowsZ > 1 ? row / (this.rackRowsZ - 1) : 0;
 
-        const rackPos = rack.worldPosition;
-        const machinePos = machine.worldPosition;
-
-        this._towardMachine.set(machinePos.x - rackPos.x, 0, machinePos.z - rackPos.z);
-        if (this._towardMachine.lengthSqr() < 1e-6) {
-            this._towardMachine.set(1, 0, 0);
-        } else {
-            this._towardMachine.normalize();
-        }
-
-        this._perpDir.set(-this._towardMachine.z, 0, this._towardMachine.x);
-
-        this._rackOrigin.set(rackPos.x, rackPos.y + this.rackSurfaceY, rackPos.z);
-        Vec3.scaleAndAdd(this._rackOrigin, this._rackOrigin, this._towardMachine, this.rackStartOffset);
+        out.x = this.rackStartWorld.x + (this.rackEndWorld.x - this.rackStartWorld.x) * colT;
+        out.y = this.rackStartWorld.y;
+        out.z = this.rackStartWorld.z + (this.rackEndWorld.z - this.rackStartWorld.z) * rowT;
     }
 
     // ─── UI ──────────────────────────────────────────────────────────────

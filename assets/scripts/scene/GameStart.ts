@@ -76,7 +76,7 @@ export class GameStart extends Component {
     private _juiceMachine: JuiceMachine | null = null;
 
     onLoad() {
-        this._ensureAudio();
+        AudioController.ensure();
         this._ensureCurrencyWallet();
         this._ensureCurrencyDisplay();
         this._ensureOrderManager();
@@ -84,7 +84,6 @@ export class GameStart extends Component {
         this._ensureSpeechBubbleSystem();
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
-        this._spawnMoneyPickups();
         this._ensureFruitCollectFields();
         this.scheduleOnce(() => this._bindUnlockChain(), 0);
         if (this.autoStart) {
@@ -117,6 +116,7 @@ export class GameStart extends Component {
                 const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
                 bindCameraTouchUI(orbit);
                 this._protagonist = characterNode;
+                this._onProtagonistReady();
             },
             this.protagonistPrefab,
         );
@@ -215,6 +215,11 @@ export class GameStart extends Component {
         ]);
     }
 
+    private _onProtagonistReady(): void {
+        AudioController.ensure().playBgm(SoundEffect.BgmHappyWaves);
+        this._spawnMoneyPickups();
+    }
+
     private _spawnMoneyPickups(): void {
         let spawner = this.node.getComponent(MoneyPickupSpawner);
         if (!spawner) {
@@ -262,11 +267,6 @@ export class GameStart extends Component {
     private _ensureFruitCollectFields(): void {
         const island = director.getScene()?.getChildByName('Island');
         FruitCollectFieldSetup.ensureOnIsland(island);
-    }
-
-    private _ensureAudio(): void {
-        const audio = AudioController.ensure();
-        audio.playBgm(SoundEffect.BgmHappyWaves);
     }
 
     private _ensureCurrencyWallet(): CurrencyWallet {

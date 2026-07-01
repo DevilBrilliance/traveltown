@@ -50,9 +50,11 @@ export class PlayerFruitCarrier extends Component {
 
 
 
-    @property({ tooltip: '采集检测半径（XZ）' })
-
+    @property({ tooltip: '采集检测半径（XZ），橘子等' })
     collectRadius = 4;
+
+    @property({ tooltip: '菠萝收割检测半径（XZ）' })
+    pineappleCollectRadius = 2;
 
 
 
@@ -413,16 +415,21 @@ export class PlayerFruitCarrier extends Component {
 
 
 
+    private _collectRadiusFor(fruitType: FruitType): number {
+        return fruitType === FruitType.Pineapple
+            ? this.pineappleCollectRadius
+            : this.collectRadius;
+    }
+
     private _findNearestCollectible(
         playerWorldPos: Vec3,
         filterType?: FruitType,
         preferFront = true,
     ): FruitSource | null {
-        const radiusSq = this.collectRadius * this.collectRadius;
         let bestFront: FruitSource | null = null;
-        let bestFrontDistSq = radiusSq + 1;
+        let bestFrontDistSq = Infinity;
         let bestAny: FruitSource | null = null;
-        let bestAnyDistSq = radiusSq + 1;
+        let bestAnyDistSq = Infinity;
 
         if (preferFront) {
             this._getPlayerForwardXZ(this._forward);
@@ -436,6 +443,11 @@ export class PlayerFruitCarrier extends Component {
                 if (!source.isAvailable) {
                     continue;
                 }
+                const radius = filterType !== undefined
+                    ? this._collectRadiusFor(filterType)
+                    : this._collectRadiusFor(source.fruitType);
+                const radiusSq = radius * radius;
+
                 source.getCollectWorldPosition(this._fruitPos);
                 const dx = playerWorldPos.x - this._fruitPos.x;
                 const dz = playerWorldPos.z - this._fruitPos.z;
