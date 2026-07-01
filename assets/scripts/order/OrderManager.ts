@@ -7,6 +7,7 @@ import {
 import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { CurrencyCost, CURRENCY_LABELS, CurrencyType } from '../currency/CurrencyType';
 import { OrderRequirementItem, toCurrencyCosts } from './OrderRequirement';
+import { rollCustomerJuiceRequirement } from './CustomerOrderHelper';
 import { OrderInfo, OrderListener, OrderStatus } from './OrderTypes';
 import { ORDER_SUBJECT_LABELS, OrderSubjectType } from './OrderSubjectType';
 import { OrderSubject } from './OrderSubject';
@@ -172,8 +173,27 @@ export class OrderManager extends Component {
         for (const listener of this._fulfilledListeners) {
             listener(order);
         }
+
+        const subject = this._registeredSubjects.get(subjectId);
+        if (order.subjectType === OrderSubjectType.Customer && subject?.isValid) {
+            this._renewCustomerOrder(order, subject);
+        }
+
         this._notifyOrdersChanged();
         return true;
+    }
+
+    /** 顾客订单完成后随机生成 2~5 杯菠萝汁的新需求 */
+    private _renewCustomerOrder(order: OrderInfo, subject: OrderSubject): void {
+        const next = rollCustomerJuiceRequirement();
+        const item = new OrderRequirementItem();
+        item.goodsType = next.type;
+        item.amount = next.amount;
+        subject.requirements = [item];
+
+        order.status = OrderStatus.Pending;
+        order.subjectNode = subject.node;
+        order.requirements = [{ type: next.type, amount: next.amount }];
     }
 
     /** 玩家钱包是否满足该主体订单 */

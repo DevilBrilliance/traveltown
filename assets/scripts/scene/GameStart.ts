@@ -6,7 +6,7 @@ import {
     Prefab,
     Vec3,
 } from 'cc';
-import { CurrencyType } from '../currency/CurrencyType';
+import { rollCustomerJuiceRequirement } from '../order/CustomerOrderHelper';
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAppearanceType } from '../character/CharacterAppearanceType';
 import { PlayerMovementController } from '../character/PlayerMovementController';
@@ -208,14 +208,14 @@ export class GameStart extends Component {
             {
                 position: new Vec3(-12, 0, 3),
                 appearance: CharacterAppearanceType.Customer0,
-                requirements: [{ type: CurrencyType.PineappleJuice, amount: 3 }],
+                requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_0',
                 displayName: '顾客',
             },
             {
                 position: new Vec3(-12, 0, -3),
                 appearance: CharacterAppearanceType.Customer1,
-                requirements: [{ type: CurrencyType.PineappleJuice, amount: 5 }],
+                requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_1',
                 displayName: '顾客',
             },
