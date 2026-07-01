@@ -179,7 +179,8 @@ export class PurchaseZoneView extends Component {
         cx: number, cy: number,
         zOff: number,
     ): MeshRenderer {
-        const mesh = this._buildQuadMesh(cx, cy, w, h, 0, 0, 1, 1);
+        // canvas2d 上传后 V 轴与 OpenGL 相反，只翻转 V（保持 U 水平方向不变）
+        const mesh = this._buildQuadMesh(cx, cy, w, h, 0, 1, 1, 0);
         const mat = this._buildMat(tex, Color.WHITE);
         return this._attachRenderer(name, mesh, mat, zOff);
     }
