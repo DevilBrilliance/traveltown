@@ -12,6 +12,8 @@ import {
     SpriteFrame,
     Vec3,
 } from 'cc';
+import { AudioController } from '../audio/AudioController';
+import { SoundEffect } from '../audio/SoundEffect';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import { PurchaseZoneView } from '../purchase/PurchaseZoneView';
@@ -266,6 +268,8 @@ export class JuiceMachine extends Component {
         glass.setParent(this._glassRoot);
         glass.setWorldPosition(this._glassPos);
         glass.setWorldRotation(this._glassRoot.worldRotation);
+
+        AudioController.ensure().play(SoundEffect.PourJuice);
 
         this._glassCount++;
     }

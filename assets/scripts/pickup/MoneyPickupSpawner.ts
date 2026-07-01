@@ -12,6 +12,8 @@ import {
     Prefab,
     Vec3,
 } from 'cc';
+import { AudioController } from '../audio/AudioController';
+import { SoundEffect } from '../audio/SoundEffect';
 import { MoneyPickup } from './MoneyPickup';
 
 const { ccclass, property } = _decorator;
@@ -192,6 +194,7 @@ export class MoneyPickupSpawner extends Component {
         coin.setWorldPosition(pos);
         coin.setScale(this.modelScale);
         coin.addComponent(MoneyPickup);
+        AudioController.ensure().play(SoundEffect.Appear02);
         this._coins.push(coin);
     }
 

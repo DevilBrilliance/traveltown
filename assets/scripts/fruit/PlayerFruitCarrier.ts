@@ -140,6 +140,14 @@ export class PlayerFruitCarrier extends Component {
 
 
 
+    public get isHarvesting(): boolean {
+
+        return this._isHarvesting;
+
+    }
+
+
+
     public get carriedTypes(): readonly FruitType[] {
 
         return this._carriedTypes;
@@ -486,6 +494,9 @@ export class PlayerFruitCarrier extends Component {
         this._pendingHarvestSource = source;
 
         this.node.getComponent(AppearanceController)?.enableSickle();
+
+        AudioController.ensure().play(SoundEffect.ChopPineapple);
+        AudioController.instance?.stopLoop();
 
         this.node.emit('fruit-harvest-started');
 

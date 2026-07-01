@@ -42,6 +42,7 @@ export class AudioController extends Component {
     private _volume = 1;
     private _loopEffect: SoundEffect | null = null;
     private _pendingLoop: { effect: SoundEffect; volumeScale: number } | null = null;
+    private _pendingBgm: { effect: SoundEffect; volumeScale: number } | null = null;
 
     onLoad() {
         if (AudioController._instance && AudioController._instance !== this) {
@@ -129,9 +130,11 @@ export class AudioController extends Component {
     public playBgm(effect: SoundEffect = SoundEffect.BgmHappyWaves, volumeScale = 1): void {
         const clip = this._clipCache.get(effect);
         if (!clip || !this._bgmSource) {
-            console.warn(`[AudioController] BGM 未加载: SoundEffect.${SoundEffect[effect]}`);
+            this._pendingBgm = { effect, volumeScale };
             return;
         }
+
+        this._pendingBgm = null;
 
         if (this._bgmSource.playing && this._bgmSource.clip === clip) {
             return;
@@ -203,6 +206,9 @@ export class AudioController extends Component {
                     this._clipCache.set(effect, clip);
                     if (this._pendingLoop?.effect === effect) {
                         this.playLoop(this._pendingLoop.effect, this._pendingLoop.volumeScale);
+                    }
+                    if (this._pendingBgm?.effect === effect) {
+                        this.playBgm(this._pendingBgm.effect, this._pendingBgm.volumeScale);
                     }
                 }
 

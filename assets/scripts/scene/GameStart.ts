@@ -30,6 +30,8 @@ import {
     PURCHASE_WORKER_REWARD_ICON_PATH,
 } from '../purchase/PurchaseZonePaths';
 import { WorkerRewardVariant } from '../reward/RewardType';
+import { AudioController } from '../audio/AudioController';
+import { SoundEffect } from '../audio/SoundEffect';
 import { FruitCollectFieldSetup } from '../fruit/FruitCollectFieldSetup';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
@@ -74,6 +76,7 @@ export class GameStart extends Component {
     private _juiceMachine: JuiceMachine | null = null;
 
     onLoad() {
+        this._ensureAudio();
         this._ensureCurrencyWallet();
         this._ensureCurrencyDisplay();
         this._ensureOrderManager();
@@ -259,6 +262,11 @@ export class GameStart extends Component {
     private _ensureFruitCollectFields(): void {
         const island = director.getScene()?.getChildByName('Island');
         FruitCollectFieldSetup.ensureOnIsland(island);
+    }
+
+    private _ensureAudio(): void {
+        const audio = AudioController.ensure();
+        audio.playBgm(SoundEffect.BgmHappyWaves);
     }
 
     private _ensureCurrencyWallet(): CurrencyWallet {

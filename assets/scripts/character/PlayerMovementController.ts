@@ -73,6 +73,8 @@ export class PlayerMovementController extends Component {
         }
         this.node.on('fruit-collect-anim-finished', this._refreshLocomotionAnim, this);
         this.node.on('fruit-harvest-started', this._refreshLocomotionAnim, this);
+        this.node.on('fruit-harvest-started', this._onHarvestStarted, this);
+        this.node.on('fruit-collect-anim-finished', this._onHarvestFinished, this);
         this.node.on('fruit-carry-changed', this._refreshLocomotionAnim, this);
     }
 
@@ -82,6 +84,8 @@ export class PlayerMovementController extends Component {
         }
         this.node.off('fruit-collect-anim-finished', this._refreshLocomotionAnim, this);
         this.node.off('fruit-harvest-started', this._refreshLocomotionAnim, this);
+        this.node.off('fruit-harvest-started', this._onHarvestStarted, this);
+        this.node.off('fruit-collect-anim-finished', this._onHarvestFinished, this);
         this.node.off('fruit-carry-changed', this._refreshLocomotionAnim, this);
         if (this._isMoving && this.runSoundEnabled) {
             AudioController.instance?.stopLoop();
@@ -113,6 +117,9 @@ export class PlayerMovementController extends Component {
 
         this._updateRotation(dt);
         this._setMoving(true);
+        if (this.fruitCarrier?.isHarvesting && this.runSoundEnabled) {
+            AudioController.instance?.stopLoop();
+        }
     }
 
     private _setMoving(moving: boolean): void {
@@ -122,8 +129,10 @@ export class PlayerMovementController extends Component {
         this._isMoving = moving;
         if (moving) {
             this._playLocomotionAnim(true);
-            if (this.runSoundEnabled) {
+            if (this._canPlayRunSound()) {
                 AudioController.ensure().playLoop(SoundEffect.Run, this.runSoundVolume);
+            } else if (this.fruitCarrier?.isHarvesting) {
+                AudioController.instance?.stopLoop();
             }
         } else {
             this._playLocomotionAnim(false);
@@ -132,6 +141,20 @@ export class PlayerMovementController extends Component {
             }
         }
     }
+
+    private _canPlayRunSound(): boolean {
+        return this.runSoundEnabled && !this.fruitCarrier?.isHarvesting;
+    }
+
+    private _onHarvestStarted = (): void => {
+        AudioController.instance?.stopLoop();
+    };
+
+    private _onHarvestFinished = (): void => {
+        if (this._isMoving && this._canPlayRunSound()) {
+            AudioController.ensure().playLoop(SoundEffect.Run, this.runSoundVolume);
+        }
+    };
 
     private _refreshLocomotionAnim = (): void => {
         this._playLocomotionAnim(this._isMoving, true);
