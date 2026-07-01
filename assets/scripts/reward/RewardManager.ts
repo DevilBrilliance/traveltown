@@ -4,7 +4,6 @@ import {
     Component,
     director,
     instantiate,
-    js,
     math,
     Node,
     Prefab,
@@ -20,6 +19,9 @@ import {
 } from '../character/CharacterAppearanceType';
 import { CharacterAnimController } from '../character/CharacterAnimController';
 import { getDefaultAnimForAppearance } from '../character/CharacterAnimState';
+import { WorkerAIController } from '../character/WorkerAIController';
+import { WorkerFruitCarrier } from '../character/WorkerFruitCarrier';
+import { WorkerMovementController } from '../character/WorkerMovementController';
 import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { CurrencyType } from '../currency/CurrencyType';
@@ -349,21 +351,12 @@ export class RewardManager extends Component {
 
         node.setWorldPosition(worldPos);
 
-        this._attachWorkerComponents(node);
+        node.addComponent(WorkerFruitCarrier);
+        node.addComponent(WorkerMovementController);
+        const ai = node.addComponent(WorkerAIController);
+        ai.setSpawnPosition(worldPos);
 
         return node;
-    }
-
-    private _attachWorkerComponents(node: Node): void {
-        const names = ['WorkerFruitCarrier', 'WorkerMovementController', 'WorkerAIController'];
-        for (const name of names) {
-            const cls = js.getClassByName(name);
-            if (cls) {
-                node.addComponent(cls as typeof Component);
-            } else {
-                console.warn(`[RewardManager] 未找到工人组件: ${name}`);
-            }
-        }
     }
 
     private _preloadWorkerPrefab(): void {

@@ -17,13 +17,14 @@ const { ccclass, property } = _decorator;
 enum WorkerAIState {
     SeekPineapple,
     Harvest,
-    GoToMachine,
+    /** 交付途中：先回工人出生点 */
+    GoToSpawnForDeposit,
+    /** 交付途中：再去榨汁机世界 UI */
+    GoToDepositUI,
     Deposit,
-    WaitAtMachine,
+    /** 机器满时在投料 UI 旁等待 */
+    WaitAtDepositUI,
 }
-
-/** 机器满时在投料区旁等待的世界坐标 */
-const MACHINE_WAIT_POSITION = new Vec3(24, 0, -8);
 
 /**
  * 工人 AI：寻路收割菠萝 → 投榨汁机 → 机器满时等待。
@@ -42,6 +43,9 @@ export class WorkerAIController extends Component {
     @property({ type: JuiceMachine, tooltip: '榨汁机，不填则自动查找' })
     juiceMachine: JuiceMachine | null = null;
 
+    @property({ tooltip: '工人出生点（交付前先回到此点）' })
+    spawnPosition = new Vec3();
+
     private _state = WorkerAIState.SeekPineapple;
     private _carrier: WorkerFruitCarrier | null = null;
     private _movement: WorkerMovementController | null = null;
@@ -57,6 +61,14 @@ export class WorkerAIController extends Component {
     start() {
         this._resolveBoundary();
         this._resolveJuiceMachine();
+        if (this.spawnPosition.lengthSqr() < 1e-6) {
+            this.spawnPosition.set(this.node.worldPosition);
+        }
+    }
+
+    /** 设置工人出生点（RewardManager 生成时调用） */
+    public setSpawnPosition(pos: Vec3): void {
+        this.spawnPosition.set(pos);
     }
 
     onDestroy() {
@@ -83,14 +95,17 @@ export class WorkerAIController extends Component {
             case WorkerAIState.Harvest:
                 this._updateHarvest();
                 break;
-            case WorkerAIState.GoToMachine:
-                this._updateGoToMachine(dt);
+            case WorkerAIState.GoToSpawnForDeposit:
+                this._updateGoToSpawnForDeposit(dt);
+                break;
+            case WorkerAIState.GoToDepositUI:
+                this._updateGoToDepositUI(dt);
                 break;
             case WorkerAIState.Deposit:
                 this._updateDeposit(dt);
                 break;
-            case WorkerAIState.WaitAtMachine:
-                this._updateWaitAtMachine(dt);
+            case WorkerAIState.WaitAtDepositUI:
+                this._updateWaitAtDepositUI();
                 break;
             default:
                 break;
@@ -101,7 +116,7 @@ export class WorkerAIController extends Component {
         const carrier = this._carrier!;
         if (carrier.isFull || !PineappleFieldHelper.hasAvailablePineapple()) {
             this._clearTarget();
-            this._setState(WorkerAIState.GoToMachine);
+            this._setState(WorkerAIState.GoToSpawnForDeposit);
             return;
         }
 
@@ -117,7 +132,7 @@ export class WorkerAIController extends Component {
 
         if (!this._targetSource) {
             this._movement?.setMoving(false);
-            this._setState(WorkerAIState.GoToMachine);
+            this._setState(WorkerAIState.GoToSpawnForDeposit);
             return;
         }
 
@@ -155,7 +170,7 @@ export class WorkerAIController extends Component {
         if (!this._targetSource?.isAvailable) {
             this._clearTarget();
             if (carrier.isFull || !PineappleFieldHelper.hasAvailablePineapple()) {
-                this._setState(WorkerAIState.GoToMachine);
+                this._setState(WorkerAIState.GoToSpawnForDeposit);
             } else {
                 this._setState(WorkerAIState.SeekPineapple);
             }
@@ -164,7 +179,7 @@ export class WorkerAIController extends Component {
 
         if (carrier.isFull) {
             this._clearTarget();
-            this._setState(WorkerAIState.GoToMachine);
+            this._setState(WorkerAIState.GoToSpawnForDeposit);
             return;
         }
 
@@ -173,7 +188,7 @@ export class WorkerAIController extends Component {
         }
     }
 
-    private _updateGoToMachine(dt: number): void {
+    private _updateGoToSpawnForDeposit(dt: number): void {
         const carrier = this._carrier!;
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
@@ -187,9 +202,34 @@ export class WorkerAIController extends Component {
             return;
         }
 
-        if (machine.isActorInDepositRange(this.node)) {
+        this._navTarget.set(this.spawnPosition);
+        const move = BoundaryNavigator.moveToward(
+            this.node,
+            this._navTarget,
+            this.moveSpeed,
+            dt,
+            this.boundary,
+            this.arriveRadius,
+        );
+        this._movement?.setMoving(move.moving);
+
+        if (move.arrived) {
             this._movement?.setMoving(false);
-            this._setState(machine.canDeposit ? WorkerAIState.Deposit : WorkerAIState.WaitAtMachine);
+            this._setState(WorkerAIState.GoToDepositUI);
+        }
+    }
+
+    private _updateGoToDepositUI(dt: number): void {
+        const carrier = this._carrier!;
+        if (carrier.pineappleCount <= 0) {
+            this._movement?.setMoving(false);
+            this._setState(WorkerAIState.SeekPineapple);
+            return;
+        }
+
+        const machine = this.juiceMachine;
+        if (!machine?.isActivated) {
+            this._movement?.setMoving(false);
             return;
         }
 
@@ -203,6 +243,17 @@ export class WorkerAIController extends Component {
             this.arriveRadius,
         );
         this._movement?.setMoving(move.moving);
+
+        if (!move.arrived) {
+            return;
+        }
+
+        this._movement?.setMoving(false);
+        if (machine.canDeposit && machine.isActorInDepositRange(this.node)) {
+            this._setState(WorkerAIState.Deposit);
+        } else if (!machine.canDeposit) {
+            this._setState(WorkerAIState.WaitAtDepositUI);
+        }
     }
 
     private _updateDeposit(dt: number): void {
@@ -219,12 +270,12 @@ export class WorkerAIController extends Component {
         }
 
         if (!machine.isActorInDepositRange(this.node)) {
-            this._setState(WorkerAIState.GoToMachine);
+            this._setState(WorkerAIState.GoToDepositUI);
             return;
         }
 
         if (!machine.canDeposit) {
-            this._setState(WorkerAIState.WaitAtMachine);
+            this._setState(WorkerAIState.WaitAtDepositUI);
             return;
         }
 
@@ -234,11 +285,11 @@ export class WorkerAIController extends Component {
         if (carrier.pineappleCount <= 0) {
             this._setState(WorkerAIState.SeekPineapple);
         } else if (!machine.canDeposit) {
-            this._setState(WorkerAIState.WaitAtMachine);
+            this._setState(WorkerAIState.WaitAtDepositUI);
         }
     }
 
-    private _updateWaitAtMachine(dt: number): void {
+    private _updateWaitAtDepositUI(): void {
         const carrier = this._carrier!;
         const machine = this.juiceMachine;
         if (!machine) {
@@ -251,24 +302,15 @@ export class WorkerAIController extends Component {
             return;
         }
 
+        this._movement?.setMoving(false);
+
         if (machine.canDeposit && machine.isActorInDepositRange(this.node)) {
             this._setState(WorkerAIState.Deposit);
             return;
         }
 
-        this._navTarget.set(MACHINE_WAIT_POSITION);
-        const move = BoundaryNavigator.moveToward(
-            this.node,
-            this._navTarget,
-            this.moveSpeed * 0.6,
-            dt,
-            this.boundary,
-            this.arriveRadius,
-        );
-        this._movement?.setMoving(move.moving);
-
-        if (move.arrived && machine.canDeposit) {
-            this._setState(WorkerAIState.GoToMachine);
+        if (machine.canDeposit) {
+            this._setState(WorkerAIState.GoToDepositUI);
         }
     }
 
@@ -279,7 +321,9 @@ export class WorkerAIController extends Component {
     }
 
     private _setState(state: WorkerAIState): void {
-        if (state === WorkerAIState.GoToMachine || state === WorkerAIState.WaitAtMachine) {
+        if (state === WorkerAIState.GoToSpawnForDeposit
+            || state === WorkerAIState.GoToDepositUI
+            || state === WorkerAIState.WaitAtDepositUI) {
             if (this._state === WorkerAIState.SeekPineapple || this._state === WorkerAIState.Harvest) {
                 this._clearTarget();
             }
