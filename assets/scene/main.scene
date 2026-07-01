@@ -50445,7 +50445,7 @@
     "triggerRadius": 1.4,
     "autoPurchaseOnEnter": true,
     "playerNode": null,
-    "dimWhenUnaffordable": true,
+    "dimWhenUnaffordable": false,
     "_id": "70TRLbXUdDaIbyTjZcjG29"
   },
   {

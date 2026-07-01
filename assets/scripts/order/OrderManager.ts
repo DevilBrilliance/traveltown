@@ -144,6 +144,38 @@ export class OrderManager extends Component {
         return orderId ? this._orders.get(orderId) ?? null : null;
     }
 
+    /**
+     * 更新订单剩余需求（用于渐进交付，如购买区投币）
+     */
+    public syncRequirements(subjectId: string, requirements: CurrencyCost[]): void {
+        const order = this.getOrderBySubjectId(subjectId);
+        if (!order || order.status !== OrderStatus.Pending) {
+            return;
+        }
+        order.requirements = requirements
+            .filter((r) => r.amount > 0)
+            .map((r) => ({ ...r }));
+        this._notifyOrdersChanged();
+    }
+
+    /**
+     * 标记订单完成（不扣款，适用于已在外部完成支付的订单）
+     */
+    public completeOrder(subjectId: string): boolean {
+        const order = this.getOrderBySubjectId(subjectId);
+        if (!order || order.status !== OrderStatus.Pending) {
+            return false;
+        }
+
+        order.status = OrderStatus.Fulfilled;
+        order.requirements = [];
+        for (const listener of this._fulfilledListeners) {
+            listener(order);
+        }
+        this._notifyOrdersChanged();
+        return true;
+    }
+
     /** 玩家钱包是否满足该主体订单 */
     public canFulfill(subjectId: string): boolean {
         const order = this.getOrderBySubjectId(subjectId);

@@ -8,6 +8,7 @@ import {
     Material,
     MeshRenderer,
     Node,
+    resources,
     Sprite,
     SpriteFrame,
     Texture2D,
@@ -15,6 +16,7 @@ import {
     utils,
     Vec3,
 } from 'cc';
+import { PURCHASE_ZONE_BG_COMPLETE_PATH } from './PurchaseZonePaths';
 
 const { ccclass, property } = _decorator;
 
@@ -36,10 +38,16 @@ const { ccclass, property } = _decorator;
 @ccclass('PurchaseZoneView')
 export class PurchaseZoneView extends Component {
     @property({ tooltip: '余额不足时 UI 变暗' })
-    dimWhenUnaffordable = true;
+    dimWhenUnaffordable = false;
 
     private _quads: Array<{ renderer: MeshRenderer; mat: Material }> = [];
+    private _bgRenderer: MeshRenderer | null = null;
     private _filledRenderer: MeshRenderer | null = null;
+    private _filledFrame: SpriteFrame | null = null;
+    private _filledCx = 0;
+    private _filledCy = 0;
+    private _filledW = 0;
+    private _filledH = 0;
     private _amountTex: Texture2D | null = null;
     private _amountRenderer: MeshRenderer | null = null;
     private _amountString = '';
@@ -74,9 +82,18 @@ export class PurchaseZoneView extends Component {
                 layer * PurchaseZoneView.LAYER_Z,
             );
 
+            if (sprite.node.name === 'Bg') {
+                this._bgRenderer = renderer;
+            }
+
             if (sprite.node.name === 'filled') {
                 this._filledRenderer = renderer;
-                renderer.node.setScale(0, 1, 1); // 初始隐藏
+                this._filledFrame = sprite.spriteFrame;
+                this._filledCx = pos.x;
+                this._filledCy = pos.y;
+                this._filledW = w;
+                this._filledH = h;
+                this._applyFilledProgress(0);
             }
 
             layer++;
@@ -134,9 +151,54 @@ export class PurchaseZoneView extends Component {
     }
 
     public setProgress(ratio: number): void {
-        if (this._filledRenderer) {
-            this._filledRenderer.node.setScale(Math.max(0, Math.min(1, ratio)), 1, 1);
+        this._applyFilledProgress(ratio);
+    }
+
+    /** 自下而上填充（与预制体 FILLED/VERTICAL 一致） */
+    private _applyFilledProgress(ratio: number): void {
+        if (!this._filledRenderer || !this._filledFrame) {
+            return;
         }
+        const r = Math.max(0, Math.min(1, ratio));
+        if (r <= 0) {
+            this._filledRenderer.node.active = false;
+            return;
+        }
+
+        this._filledRenderer.node.active = true;
+        const uv = this._frameUV(this._filledFrame);
+        const visH = this._filledH * r;
+        const bottomY = this._filledCy - this._filledH * 0.5;
+        const visCy = bottomY + visH * 0.5;
+        const vSpan = uv.v1 - uv.v0;
+        const vTop = uv.v0 + vSpan * r;
+
+        this._filledRenderer.mesh = this._buildQuadMesh(
+            this._filledCx,
+            visCy,
+            this._filledW,
+            visH,
+            uv.u0,
+            uv.v0,
+            uv.u1,
+            vTop,
+        );
+    }
+
+    /** 投满后切换底板为蓝框，保留填充进度；贴图换好后回调 */
+    public setCompleted(onBgSwapped?: () => void): void {
+        if (!this._bgRenderer) {
+            onBgSwapped?.();
+            return;
+        }
+        this._loadTex(PURCHASE_ZONE_BG_COMPLETE_PATH, (tex) => {
+            if (!this._bgRenderer?.isValid) {
+                onBgSwapped?.();
+                return;
+            }
+            this._bgRenderer.getMaterialInstance(0)?.setProperty('mainTexture', tex);
+            onBgSwapped?.();
+        });
     }
 
     onDestroy(): void {
@@ -300,5 +362,19 @@ export class PurchaseZoneView extends Component {
         ctx.strokeText(text, mx, my);
         ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${color.a / 255})`;
         ctx.fillText(text, mx, my);
+    }
+
+    private _loadTex(path: string, cb: (tex: Texture2D) => void): void {
+        resources.load(`${path}/texture`, Texture2D, (err, tex) => {
+            if (!err && tex && this.isValid) {
+                cb(tex);
+                return;
+            }
+            resources.load(path, Texture2D, (err2, tex2) => {
+                if (!err2 && tex2 && this.isValid) {
+                    cb(tex2);
+                }
+            });
+        });
     }
 }

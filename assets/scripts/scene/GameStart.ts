@@ -22,6 +22,7 @@ import { OrderBubbleBinder } from '../ui/bubble/OrderBubbleBinder';
 import { SpeechBubbleTestInput } from '../ui/bubble/SpeechBubbleTestInput';
 import { CustomerSpawner } from '../character/CustomerSpawner';
 import { MoneyPickupSpawner } from '../pickup/MoneyPickupSpawner';
+import { PurchaseZone } from '../purchase/PurchaseZone';
 
 const { ccclass, property } = _decorator;
 
@@ -47,6 +48,7 @@ export class GameStart extends Component {
    
 
     private _protagonist: Node | null = null;
+    private _customersSpawned = false;
 
     onLoad() {
         this._ensureCurrencyWallet();
@@ -57,9 +59,16 @@ export class GameStart extends Component {
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
         this._spawnMoneyPickups();
+        this.scheduleOnce(() => this._bindCashRegisterUnlock(), 0);
         if (this.autoStart) {
             this.startGame();
         }
+    }
+
+    onDestroy() {
+        const island = director.getScene()?.getChildByName('Island');
+        const zoneNode = island?.getChildByName('CounterPurchaseZone');
+        zoneNode?.off('purchase-zone-ui-closed', this._onPurchaseZoneUiClosed, this);
     }
 
     /** 开始游戏并创建主角 */
@@ -79,10 +88,28 @@ export class GameStart extends Component {
                 const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
                 bindCameraTouchUI(orbit);
                 this._protagonist = characterNode;
-                this._spawnCustomers();
             },
             this.protagonistPrefab,
         );
+    }
+
+    private _bindCashRegisterUnlock(): void {
+        const island = director.getScene()?.getChildByName('Island');
+        const zoneNode = island?.getChildByName('CounterPurchaseZone');
+        zoneNode?.on('purchase-zone-ui-closed', this._onPurchaseZoneUiClosed, this);
+
+        const purchaseZone = zoneNode?.getComponent(PurchaseZone);
+        if (purchaseZone?.isPurchased) {
+            this._onPurchaseZoneUiClosed();
+        }
+    }
+
+    private _onPurchaseZoneUiClosed(): void {
+        if (this._customersSpawned) {
+            return;
+        }
+        this._customersSpawned = true;
+        this._spawnCustomers();
     }
 
     private _spawnCustomers(): void {
