@@ -18,7 +18,7 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { OrderManager } from '../order/OrderManager';
 import { OrderSubjectType } from '../order/OrderSubjectType';
-import { WorkerRewardVariant } from '../reward/RewardType';
+import { WorkerRewardVariant, StaffRole } from '../reward/RewardType';
 import { WorkerGrant } from '../reward/WorkerGrant';
 import { RewardManager } from '../reward/RewardManager';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
@@ -50,6 +50,9 @@ export class PurchaseZone extends Component {
 
     @property({ type: Enum(WorkerRewardVariant), tooltip: '解锁后生成的工人类型' })
     grantWorkerVariant: WorkerRewardVariant = WorkerRewardVariant.WorkerNan2;
+
+    @property({ type: Enum(StaffRole), tooltip: '解锁后生成的岗位（工人 / 服务员）' })
+    grantStaffRole: StaffRole = StaffRole.Worker;
 
     @property({ tooltip: '工人生成世界坐标（grantWorkerCount > 0 时）' })
     workerSpawnPosition = new Vec3(0, 0, 0);
@@ -256,6 +259,7 @@ export class PurchaseZone extends Component {
                     : [this.workerSpawnPosition],
                 this._workerLookAtTarget,
                 RewardManager.ensure().workerPrefab,
+                this.grantStaffRole,
             );
             RewardManager.ensure().registerWorkers(workers);
         }

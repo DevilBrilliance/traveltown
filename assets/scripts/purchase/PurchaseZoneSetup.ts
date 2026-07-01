@@ -1,6 +1,6 @@
 import { Node, Vec3 } from 'cc';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
-import { WorkerRewardVariant } from '../reward/RewardType';
+import { WorkerRewardVariant, StaffRole } from '../reward/RewardType';
 import { PurchaseZone } from './PurchaseZone';
 
 export interface PurchaseZoneConfig {
@@ -10,6 +10,7 @@ export interface PurchaseZoneConfig {
     rewardIconPath?: string;
     grantWorkerCount?: number;
     grantWorkerVariant?: WorkerRewardVariant;
+    grantStaffRole?: StaffRole;
     workerSpawnPosition?: Vec3;
     workerSpawnPositions?: readonly Vec3[];
     workerLookAtTarget?: Vec3;
@@ -48,6 +49,9 @@ export function ensurePurchaseZone(
     zone.grantWorkerCount = config.grantWorkerCount ?? 0;
     if (config.grantWorkerVariant !== undefined) {
         zone.grantWorkerVariant = config.grantWorkerVariant;
+    }
+    if (config.grantStaffRole !== undefined) {
+        zone.grantStaffRole = config.grantStaffRole;
     }
     if (config.workerSpawnPositions && config.workerSpawnPositions.length > 0) {
         zone.setWorkerSpawnPositions(

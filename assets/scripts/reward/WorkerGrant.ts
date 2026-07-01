@@ -20,8 +20,11 @@ import { getDefaultAnimForAppearance } from '../character/CharacterAnimState';
 import { WorkerAIController } from '../character/WorkerAIController';
 import { WorkerFruitCarrier } from '../character/WorkerFruitCarrier';
 import { WorkerMovementController } from '../character/WorkerMovementController';
+import { WaiterAIController } from '../character/WaiterAIController';
+import { WaiterMovementController } from '../character/WaiterMovementController';
+import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
-import { WorkerRewardVariant } from './RewardType';
+import { StaffRole, WorkerRewardVariant } from './RewardType';
 
 const WORKER_APPEARANCE: Record<WorkerRewardVariant, CharacterAppearanceType> = {
     [WorkerRewardVariant.WorkerNan2]: CharacterAppearanceType.WorkerNan2,
@@ -42,6 +45,7 @@ export class WorkerGrant {
         positions: readonly Vec3[],
         lookAtTarget?: Vec3,
         prefabOverride?: Prefab | null,
+        role: StaffRole = StaffRole.Worker,
     ): Node[] {
         if (count <= 0 || positions.length === 0) {
             return [];
@@ -67,7 +71,14 @@ export class WorkerGrant {
                 island,
                 0,
             );
-            const node = WorkerGrant._instantiateWorker(parent, prefab, appearance, index, pos);
+            const node = WorkerGrant._instantiateStaff(
+                parent,
+                prefab,
+                appearance,
+                index,
+                pos,
+                role,
+            );
             if (!node) {
                 continue;
             }
@@ -86,6 +97,7 @@ export class WorkerGrant {
         base: Vec3,
         spacing: number,
         prefabOverride?: Prefab | null,
+        role: StaffRole = StaffRole.Worker,
     ): Node[] {
         if (count <= 0) {
             return [];
@@ -109,7 +121,14 @@ export class WorkerGrant {
                 base.y,
                 base.z + Math.floor(index / 5) * spacing,
             );
-            const node = WorkerGrant._instantiateWorker(parent, prefab, appearance, index, pos);
+            const node = WorkerGrant._instantiateStaff(
+                parent,
+                prefab,
+                appearance,
+                index,
+                pos,
+                role,
+            );
             if (node) {
                 spawned.push(node);
             }
@@ -128,16 +147,17 @@ export class WorkerGrant {
         WorkerGrant._preloadPrefab();
     }
 
-    private static _instantiateWorker(
+    private static _instantiateStaff(
         parent: Node,
         prefab: Prefab,
         appearance: CharacterAppearanceType,
         index: number,
         worldPos: Vec3,
+        role: StaffRole,
     ): Node | null {
         const node = instantiate(prefab);
         parent.addChild(node);
-        node.name = `Worker_${index}`;
+        node.name = role === StaffRole.Waiter ? `Waiter_${index}` : `Worker_${index}`;
 
         const controller = node.getComponent(AppearanceController)
             ?? node.addComponent(AppearanceController);
@@ -149,10 +169,17 @@ export class WorkerGrant {
 
         node.setWorldPosition(worldPos);
 
-        node.addComponent(WorkerFruitCarrier);
-        node.addComponent(WorkerMovementController);
-        const ai = node.addComponent(WorkerAIController);
-        ai.setSpawnPosition(worldPos);
+        if (role === StaffRole.Waiter) {
+            node.addComponent(PlayerJuiceTrayCarrier);
+            node.addComponent(WaiterMovementController);
+            const ai = node.addComponent(WaiterAIController);
+            ai.setSpawnPosition(worldPos);
+        } else {
+            node.addComponent(WorkerFruitCarrier);
+            node.addComponent(WorkerMovementController);
+            const ai = node.addComponent(WorkerAIController);
+            ai.setSpawnPosition(worldPos);
+        }
 
         return node;
     }

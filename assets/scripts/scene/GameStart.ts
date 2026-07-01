@@ -34,7 +34,7 @@ import {
     WORKER_PURCHASE_POSITION,
     WORKER_SPAWN_POSITIONS,
 } from '../purchase/WorkerPurchaseConfig';
-import { WorkerRewardVariant } from '../reward/RewardType';
+import { WorkerRewardVariant, StaffRole } from '../reward/RewardType';
 import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { FruitCollectFieldSetup } from '../fruit/FruitCollectFieldSetup';
@@ -174,6 +174,7 @@ export class GameStart extends Component {
                 rewardIconPath: PURCHASE_WAITER_REWARD_ICON_PATH,
                 grantWorkerCount: 1,
                 grantWorkerVariant: WorkerRewardVariant.WorkerNv1,
+                grantStaffRole: StaffRole.Waiter,
                 workerSpawnPosition: this.cashierSpawnPosition,
             },
         );

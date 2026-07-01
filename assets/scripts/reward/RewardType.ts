@@ -8,6 +8,12 @@ export enum RewardType {
     GoldCoin = 2,
 }
 
+/** 雇佣岗位：田间工人 / 柜台服务员 */
+export enum StaffRole {
+    Worker = 0,
+    Waiter = 1,
+}
+
 /** 工人类型（奖励工人时使用） */
 export enum WorkerRewardVariant {
     /** 工人 nan2 */

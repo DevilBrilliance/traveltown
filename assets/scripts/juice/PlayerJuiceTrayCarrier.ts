@@ -16,8 +16,7 @@ import { CharacterAnimState } from '../character/CharacterAnimState';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { CurrencyType } from '../currency/CurrencyType';
 import { OrderManager } from '../order/OrderManager';
-import { OrderSubjectType } from '../order/OrderSubjectType';
-import { OrderInfo } from '../order/OrderTypes';
+import { findPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
 import { JuiceMachine } from './JuiceMachine';
 import { JUICE_TRAY_DB_PATH, JUICE_TRAY_PREFAB_UUID } from './JuiceMachinePaths';
 import { JuiceRackBounds } from './JuiceRackBounds';
@@ -121,6 +120,21 @@ export class PlayerJuiceTrayCarrier extends Component {
 
     public get isInPickupZone(): boolean {
         return this._inPickupZone;
+    }
+
+    /** 当前是否在果汁架拾取范围内（供服务员 AI 判定） */
+    public isInRackPickupRange(): boolean {
+        const machine = this._resolveJuiceMachine();
+        const rack = this._resolveRack(machine);
+        if (!rack?.isValid) {
+            return false;
+        }
+        return this._isInsideRackPickupZone(rack);
+    }
+
+    /** 当前是否在收银台交付范围内（供服务员 AI 判定） */
+    public isActorNearCounter(): boolean {
+        return this._isNearCounter();
     }
 
     public bindJuiceMachine(machine: JuiceMachine | null): void {
@@ -410,18 +424,8 @@ export class PlayerJuiceTrayCarrier extends Component {
         );
     }
 
-    private _findPendingCustomerJuiceOrder(): OrderInfo | null {
-        const orders = OrderManager.instance?.getPendingOrders() ?? [];
-        for (const order of orders) {
-            if (order.subjectType !== OrderSubjectType.Customer) {
-                continue;
-            }
-            const juice = order.requirements.find((r) => r.type === CurrencyType.PineappleJuice);
-            if (juice && juice.amount > 0) {
-                return order;
-            }
-        }
-        return null;
+    private _findPendingCustomerJuiceOrder() {
+        return findPendingCustomerJuiceOrder();
     }
 
     private _handleCounterDelivery(dt: number): void {

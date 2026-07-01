@@ -296,7 +296,7 @@ export class PlayAreaBoundary extends Component {
         let current: Node | null = node;
         while (current) {
             const name = current.name;
-            if (name === 'Protagonist' || /^Customer/i.test(name) || /^Worker_/i.test(name)) {
+            if (name === 'Protagonist' || /^Customer/i.test(name) || /^Worker_/i.test(name) || /^Waiter_/i.test(name)) {
                 return true;
             }
             if (/DiBan/i.test(name)) {
