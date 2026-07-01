@@ -21,6 +21,7 @@ import { SpeechBubbleManager } from '../ui/bubble/SpeechBubbleManager';
 import { OrderBubbleBinder } from '../ui/bubble/OrderBubbleBinder';
 import { SpeechBubbleTestInput } from '../ui/bubble/SpeechBubbleTestInput';
 import { CustomerSpawner } from '../character/CustomerSpawner';
+import { MoneyPickupSpawner } from '../pickup/MoneyPickupSpawner';
 
 const { ccclass, property } = _decorator;
 
@@ -55,6 +56,7 @@ export class GameStart extends Component {
         this._ensureSpeechBubbleSystem();
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
+        this._spawnMoneyPickups();
         if (this.autoStart) {
             this.startGame();
         }
@@ -93,6 +95,17 @@ export class GameStart extends Component {
         spawner.count = 3;
         spawner.npcPrefab = this.protagonistPrefab;
         spawner.spawnCustomers();
+    }
+
+    private _spawnMoneyPickups(): void {
+        let spawner = this.node.getComponent(MoneyPickupSpawner);
+        if (!spawner) {
+            spawner = this.node.addComponent(MoneyPickupSpawner);
+        }
+        spawner.center.set(6, 0, 0);
+        spawner.radius = 5;
+        spawner.count = 5;
+        spawner.spawnPickups();
     }
 
     public get protagonist(): Node | null {
