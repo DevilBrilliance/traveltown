@@ -50434,10 +50434,16 @@
     "unlockTarget": {
       "__id__": 1988
     },
+    "uiPrefab": null,
     "planeYOffset": 0.02,
+    "uiScale": {
+      "__type__": "cc.Vec3",
+      "x": 0.006,
+      "y": 0.006,
+      "z": 0.006
+    },
     "triggerRadius": 1.4,
     "autoPurchaseOnEnter": true,
-    "drainPerSecond": 20,
     "playerNode": null,
     "dimWhenUnaffordable": true,
     "_id": "70TRLbXUdDaIbyTjZcjG29"
