@@ -4,8 +4,9 @@ import { Node, SkeletalAnimation, SkinnedMeshRenderer, Vec3 } from 'cc';
 export const CHARACTER_BACK_SOCKET_PATH =
     'Group/DeformationSystem/Root_M/Spine1_M/Chest_M';
 
-/** 后背骨骼名（调试/兜底用） */
-export const CHARACTER_BACK_BONE_NAME = 'Spine1_M';
+/** 端托盘时托盘跟随的骨骼（双手前方） */
+export const CHARACTER_PLATE_SOCKET_PATH =
+    'Group/DeformationSystem/Root_M/Spine1_M/Chest_M';
 
 /**
  * 注册 SkeletalAnimation Socket（挂点），使 target 节点每帧跟随骨骼。

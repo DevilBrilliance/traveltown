@@ -14,6 +14,7 @@ import { SoundEffect } from '../audio/SoundEffect';
 import { CharacterAnimController } from './CharacterAnimController';
 import { CharacterAnimState } from './CharacterAnimState';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
+import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 
 const { ccclass, property } = _decorator;
@@ -47,6 +48,9 @@ export class PlayerMovementController extends Component {
     @property({ type: PlayerFruitCarrier, tooltip: '背篓，不填则自动查找同节点组件' })
     fruitCarrier: PlayerFruitCarrier | null = null;
 
+    @property({ type: PlayerJuiceTrayCarrier, tooltip: '端托盘，不填则自动查找同节点组件' })
+    juiceTrayCarrier: PlayerJuiceTrayCarrier | null = null;
+
     private _anim: CharacterAnimController | null = null;
     private _isMoving = false;
 
@@ -71,11 +75,15 @@ export class PlayerMovementController extends Component {
         if (!this.fruitCarrier) {
             this.fruitCarrier = this.getComponent(PlayerFruitCarrier);
         }
+        if (!this.juiceTrayCarrier) {
+            this.juiceTrayCarrier = this.getComponent(PlayerJuiceTrayCarrier);
+        }
         this.node.on('fruit-collect-anim-finished', this._refreshLocomotionAnim, this);
         this.node.on('fruit-harvest-started', this._refreshLocomotionAnim, this);
         this.node.on('fruit-harvest-started', this._onHarvestStarted, this);
         this.node.on('fruit-collect-anim-finished', this._onHarvestFinished, this);
         this.node.on('fruit-carry-changed', this._refreshLocomotionAnim, this);
+        this.node.on('juice-tray-changed', this._refreshLocomotionAnim, this);
     }
 
     onDestroy() {
@@ -87,6 +95,7 @@ export class PlayerMovementController extends Component {
         this.node.off('fruit-harvest-started', this._onHarvestStarted, this);
         this.node.off('fruit-collect-anim-finished', this._onHarvestFinished, this);
         this.node.off('fruit-carry-changed', this._refreshLocomotionAnim, this);
+        this.node.off('juice-tray-changed', this._refreshLocomotionAnim, this);
         if (this._isMoving && this.runSoundEnabled) {
             AudioController.instance?.stopLoop();
         }
@@ -162,7 +171,8 @@ export class PlayerMovementController extends Component {
 
     private _playLocomotionAnim(moving: boolean, force = false): void {
         const carrierState = this.fruitCarrier?.getLocomotionAnimState(moving);
-        const state = carrierState ?? (moving ? CharacterAnimState.PlayerRun : CharacterAnimState.PlayerIdle);
+        const trayState = this.juiceTrayCarrier?.getLocomotionAnimState(moving);
+        const state = carrierState ?? trayState ?? (moving ? CharacterAnimState.PlayerRun : CharacterAnimState.PlayerIdle);
         this._anim?.play(state, force);
     }
 

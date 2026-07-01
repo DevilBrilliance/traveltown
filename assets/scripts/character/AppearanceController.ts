@@ -66,6 +66,14 @@ export class AppearanceController extends Component {
         return this._sickleVisible;
     }
 
+    /** Geometry 节点（形象/道具挂点父级） */
+    public get geometryNode(): Node | null {
+        if (!this._ensureInitialized()) {
+            return null;
+        }
+        return this._geometry;
+    }
+
     onLoad() {
         this._initialize();
     }

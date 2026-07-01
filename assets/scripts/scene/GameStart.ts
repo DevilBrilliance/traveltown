@@ -34,6 +34,7 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { FruitCollectFieldSetup } from '../fruit/FruitCollectFieldSetup';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
+import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
 import { JUICE_MACHINE_ZONE_POSITION, JuiceMachineSetup } from '../juice/JuiceMachineSetup';
 
@@ -112,7 +113,9 @@ export class GameStart extends Component {
                 characterNode.name = 'Protagonist';
                 characterNode.setWorldPosition(this.spawnPosition);
                 characterNode.addComponent(PlayerFruitCarrier);
+                const juiceTray = characterNode.addComponent(PlayerJuiceTrayCarrier);
                 characterNode.addComponent(PlayerMovementController);
+                juiceTray.bindJuiceMachine(this._juiceMachine);
                 const orbit = CameraOrbitController.bindMainCamera(characterNode, true);
                 bindCameraTouchUI(orbit);
                 this._protagonist = characterNode;
@@ -130,6 +133,7 @@ export class GameStart extends Component {
 
         this._setupWorkerAndCashierZones(island);
         this._juiceMachine = JuiceMachineSetup.ensureOnIsland(island, this.juiceMachinePosition);
+        this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindJuiceMachine(this._juiceMachine);
 
         const counterZone = island.getChildByName('CounterPurchaseZone');
         counterZone?.on('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
@@ -184,6 +188,7 @@ export class GameStart extends Component {
         }
         this._workerPurchaseZone?.activate();
         this._juiceMachine?.activate();
+        this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindJuiceMachine(this._juiceMachine);
     }
 
     private _onWorkerUnlocked(): void {

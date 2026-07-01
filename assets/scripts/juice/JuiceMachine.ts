@@ -71,11 +71,11 @@ export class JuiceMachine extends Component {
     @property({ tooltip: '投料速度（个/秒）' })
     depositPerSecond = 8;
 
-    @property({ tooltip: '首角世界坐标（第 1 列第 1 行，X 大 / Z 小）' })
-    rackStartWorld = new Vec3(3.3, -0.78, -4);
+    @property({ tooltip: '首角本地坐标（相对 JuiceGlassRoot，第 1 列第 1 行）' })
+    rackStartLocal = new Vec3(-7.123, -0.78, 5.292);
 
-    @property({ tooltip: '末角世界坐标（最后一列最后一行，X 小 / Z 大）' })
-    rackEndWorld = new Vec3(-1.6, -0.78, -0.78);
+    @property({ tooltip: '末角本地坐标（相对 JuiceGlassRoot，最后一列最后一行）' })
+    rackEndLocal = new Vec3(-12.023, -0.78, 8.512);
 
     @property({ tooltip: 'X 方向列数' })
     rackColsX = 6;
@@ -135,6 +135,35 @@ export class JuiceMachine extends Component {
         return this._glassCount;
     }
 
+    /** 场景栅栏区当前果汁杯数量 */
+    public get sceneGlassCount(): number {
+        this._ensureGlassRoot();
+        return this._glassRoot?.children.length ?? 0;
+    }
+
+    /** 从栅栏区取走最早的一杯（供玩家托盘拾取） */
+    public takeOneSceneGlass(): Node | null {
+        this._ensureGlassRoot();
+        const root = this._glassRoot;
+        if (!root?.isValid || root.children.length === 0) {
+            return null;
+        }
+        let best: Node | null = null;
+        let bestIdx = Infinity;
+        for (const child of root.children) {
+            const match = /^JuiceGlass_(\d+)$/.exec(child.name);
+            const idx = match ? parseInt(match[1], 10) : 0;
+            if (idx < bestIdx) {
+                bestIdx = idx;
+                best = child;
+            }
+        }
+        const glass = best ?? root.children[0];
+        glass.setParent(null);
+        this._glassCount = Math.max(0, this._glassCount - 1);
+        return glass;
+    }
+
     public get canDeposit(): boolean {
         return this._storedPineapples < this.bufferCapacity;
     }
@@ -152,6 +181,10 @@ export class JuiceMachine extends Component {
         this._snapToFloorSurface();
         this.node.active = true;
         this._resolveAnimator();
+        this._ensureGlassRoot();
+        if (!this._glassPrefab) {
+            this._loadGlassPrefab();
+        }
         // 等场景底板 Mesh 世界包围盒就绪后再创建 UI
         this.scheduleOnce(() => {
             if (!this.isValid || !this._activated) {
@@ -248,28 +281,28 @@ export class JuiceMachine extends Component {
         }
 
         const index = this._glassCount;
-        this._computeGlassWorldPosition(index, this._glassPos);
+        this._computeGlassLocalPosition(index, this._glassPos);
 
         const glass = instantiate(this._glassPrefab);
         glass.name = `JuiceGlass_${index}`;
         glass.setParent(this._glassRoot);
-        glass.setWorldPosition(this._glassPos);
+        glass.setPosition(this._glassPos);
 
         AudioController.ensure().play(SoundEffect.PourJuice);
 
         this._glassCount++;
     }
 
-    /** 6×4 棋盘：先沿 Z 递增排 rackRowsZ 杯，再 X 换列 */
-    private _computeGlassWorldPosition(index: number, out: Vec3): void {
+    /** 6×4 棋盘：先沿 Z 递增排 rackRowsZ 杯，再 X 换列（相对 JuiceGlassRoot 本地坐标） */
+    private _computeGlassLocalPosition(index: number, out: Vec3): void {
         const col = Math.floor(index / this.rackRowsZ);
         const row = index % this.rackRowsZ;
         const colT = this.rackColsX > 1 ? col / (this.rackColsX - 1) : 0;
         const rowT = this.rackRowsZ > 1 ? row / (this.rackRowsZ - 1) : 0;
 
-        out.x = this.rackStartWorld.x + (this.rackEndWorld.x - this.rackStartWorld.x) * colT;
-        out.y = this.rackStartWorld.y;
-        out.z = this.rackStartWorld.z + (this.rackEndWorld.z - this.rackStartWorld.z) * rowT;
+        out.x = this.rackStartLocal.x + (this.rackEndLocal.x - this.rackStartLocal.x) * colT;
+        out.y = this.rackStartLocal.y + (this.rackEndLocal.y - this.rackStartLocal.y) * rowT;
+        out.z = this.rackStartLocal.z + (this.rackEndLocal.z - this.rackStartLocal.z) * rowT;
     }
 
     // ─── UI ──────────────────────────────────────────────────────────────
