@@ -8,3 +8,6 @@ export const BUBBLE_ICON_PATHS: Record<CurrencyType, string> = {
 
 /** 气泡背景（resources 路径） */
 export const BUBBLE_BG_PATH = 'textures/输出UI/长方形_白框';
+
+/** 订单气泡 UI 预制体（resources 路径，不含扩展名） */
+export const SPEECH_BUBBLE_PREFAB_PATH = 'prefabs/SpeechBubble';
