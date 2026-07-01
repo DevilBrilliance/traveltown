@@ -10,8 +10,8 @@ import { SoundEffect } from '../audio/SoundEffect';
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAnimController } from '../character/CharacterAnimController';
 import { CharacterAnimState } from '../character/CharacterAnimState';
-import { FruitSource } from './FruitSource';
-import { FruitType } from './FruitType';
+import { FruitSource } from '../fruit/FruitSource';
+import { FruitType } from '../fruit/FruitType';
 
 const { ccclass, property } = _decorator;
 

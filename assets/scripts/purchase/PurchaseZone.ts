@@ -18,8 +18,9 @@ import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { OrderManager } from '../order/OrderManager';
 import { OrderSubjectType } from '../order/OrderSubjectType';
-import { RewardManager } from '../reward/RewardManager';
 import { WorkerRewardVariant } from '../reward/RewardType';
+import { WorkerGrant } from '../reward/WorkerGrant';
+import { RewardManager } from '../reward/RewardManager';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import { PurchaseZoneView } from './PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from './PurchaseZonePaths';
@@ -247,21 +248,16 @@ export class PurchaseZone extends Component {
         }
 
         if (this.grantWorkerCount > 0) {
-            const manager = RewardManager.ensure();
-            if (this._workerSpawnPositions.length > 0) {
-                manager.grantWorkersAt(
-                    this.grantWorkerCount,
-                    this.grantWorkerVariant,
-                    this._workerSpawnPositions,
-                    this._workerLookAtTarget,
-                );
-            } else {
-                manager.grantWorker(
-                    this.grantWorkerCount,
-                    this.grantWorkerVariant,
-                    this.workerSpawnPosition,
-                );
-            }
+            const workers = WorkerGrant.spawnAtPositions(
+                this.grantWorkerCount,
+                this.grantWorkerVariant,
+                this._workerSpawnPositions.length > 0
+                    ? this._workerSpawnPositions
+                    : [this.workerSpawnPosition],
+                this._workerLookAtTarget,
+                RewardManager.ensure().workerPrefab,
+            );
+            RewardManager.ensure().registerWorkers(workers);
         }
 
         this.node.emit('purchase-zone-unlocked', this.unlockTarget);

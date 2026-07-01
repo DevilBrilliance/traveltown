@@ -1,32 +1,15 @@
 import {
     _decorator,
-    assetManager,
     Component,
     director,
-    instantiate,
-    math,
     Node,
     Prefab,
-    Quat,
-    resources,
     Vec3,
 } from 'cc';
-import { AppearanceController } from '../character/AppearanceController';
-import {
-    CharacterAppearanceType,
-    NPC_RIG_PREFAB_PATH,
-    NPC_RIG_PREFAB_UUID,
-} from '../character/CharacterAppearanceType';
-import { CharacterAnimController } from '../character/CharacterAnimController';
-import { getDefaultAnimForAppearance } from '../character/CharacterAnimState';
-import { WorkerAIController } from '../character/WorkerAIController';
-import { WorkerFruitCarrier } from '../character/WorkerFruitCarrier';
-import { WorkerMovementController } from '../character/WorkerMovementController';
 import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { CurrencyType } from '../currency/CurrencyType';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
-import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import {
     RewardGrantSpec,
     RewardItem,
@@ -39,13 +22,9 @@ import {
     WorkerRewardVariant,
     WORKER_VARIANT_LABELS,
 } from './RewardType';
+import { WorkerGrant } from './WorkerGrant';
 
 const { ccclass, property } = _decorator;
-
-const WORKER_APPEARANCE: Record<WorkerRewardVariant, CharacterAppearanceType> = {
-    [WorkerRewardVariant.WorkerNan2]: CharacterAppearanceType.WorkerNan2,
-    [WorkerRewardVariant.WorkerNv1]: CharacterAppearanceType.WorkerNv1,
-};
 
 /**
  * 全局奖励系统：发放工人、菠萝汁、普通金币。
@@ -81,8 +60,6 @@ export class RewardManager extends Component {
 
     private readonly _workers = new Set<Node>();
     private readonly _listeners = new Set<RewardListener>();
-    private _npcPrefab: Prefab | null = null;
-    private _workerSeq = 0;
 
     onLoad() {
         if (RewardManager._instance && RewardManager._instance !== this) {
@@ -91,7 +68,10 @@ export class RewardManager extends Component {
         }
         RewardManager._instance = this;
         director.addPersistRootNode(this.node);
-        this._preloadWorkerPrefab();
+        if (this.workerPrefab) {
+            WorkerGrant.bindPrefab(this.workerPrefab);
+        }
+        WorkerGrant.preloadPrefab();
     }
 
     onDestroy() {
@@ -118,6 +98,14 @@ export class RewardManager extends Component {
     public getWorkers(): Node[] {
         this._purgeInvalidWorkers();
         return [...this._workers];
+    }
+
+    public registerWorkers(workers: Node[]): void {
+        for (const node of workers) {
+            if (node?.isValid) {
+                this._workers.add(node);
+            }
+        }
     }
 
     /**
@@ -173,16 +161,25 @@ export class RewardManager extends Component {
         spawnBase?: Vec3,
     ): Node[] {
         const base = spawnBase ?? this.workerSpawnBase;
-        const partial = this._grantWorkers(count, variant, base);
+        const workers = WorkerGrant.spawnAtBase(
+            count,
+            variant,
+            base,
+            this.workerSpawnSpacing,
+            this.workerPrefab,
+        );
+        this.registerWorkers(workers);
         const result: RewardGrantResult = {
-            success: partial.ok,
-            granted: partial.ok ? [{ type: RewardType.Worker, amount: count, workerVariant: variant }] : [],
-            spawnedWorkers: partial.workers,
+            success: workers.length === count,
+            granted: workers.length > 0
+                ? [{ type: RewardType.Worker, amount: workers.length, workerVariant: variant }]
+                : [],
+            spawnedWorkers: workers,
         };
         if (result.granted.length > 0) {
             this._notify(result);
         }
-        return partial.workers;
+        return workers;
     }
 
     /** 在指定世界坐标生成工人，并可统一朝向目标点 */
@@ -192,16 +189,25 @@ export class RewardManager extends Component {
         positions: readonly Vec3[],
         lookAtTarget?: Vec3,
     ): Node[] {
-        const partial = this._grantWorkersAt(count, variant, positions, lookAtTarget);
+        const workers = WorkerGrant.spawnAtPositions(
+            count,
+            variant,
+            positions,
+            lookAtTarget,
+            this.workerPrefab,
+        );
+        this.registerWorkers(workers);
         const result: RewardGrantResult = {
-            success: partial.ok,
-            granted: partial.ok ? [{ type: RewardType.Worker, amount: count, workerVariant: variant }] : [],
-            spawnedWorkers: partial.workers,
+            success: workers.length === count,
+            granted: workers.length > 0
+                ? [{ type: RewardType.Worker, amount: workers.length, workerVariant: variant }]
+                : [],
+            spawnedWorkers: workers,
         };
         if (result.granted.length > 0) {
             this._notify(result);
         }
-        return partial.workers;
+        return workers;
     }
 
     /** 奖励描述 */
@@ -221,12 +227,17 @@ export class RewardManager extends Component {
                 return this._grantCurrency(CurrencyType.PineappleJuice, spec.amount, SoundEffect.CollectJuice);
             case RewardType.GoldCoin:
                 return this._grantCurrency(CurrencyType.GoldCoin, spec.amount, SoundEffect.CollectCoin);
-            case RewardType.Worker:
-                return this._grantWorkers(
+            case RewardType.Worker: {
+                const workers = WorkerGrant.spawnAtBase(
                     spec.amount,
                     spec.workerVariant ?? WorkerRewardVariant.WorkerNan2,
                     this.workerSpawnBase,
+                    this.workerSpawnSpacing,
+                    this.workerPrefab,
                 );
+                this.registerWorkers(workers);
+                return { ok: workers.length === spec.amount, workers };
+            }
             default:
                 return { ok: false, workers: [] };
         }
@@ -241,160 +252,6 @@ export class RewardManager extends Component {
         wallet.add(type, amount);
         AudioController.instance?.play(sfx);
         return { ok: true, workers: [] };
-    }
-
-    private _grantWorkers(
-        count: number,
-        variant: WorkerRewardVariant,
-        base: Vec3,
-    ): { ok: boolean; workers: Node[] } {
-        const prefab = this._npcPrefab ?? this.workerPrefab;
-        if (!prefab) {
-            console.warn('[RewardManager] 工人预制体未就绪，请稍后再试');
-            return { ok: false, workers: [] };
-        }
-
-        const appearance = WORKER_APPEARANCE[variant];
-        const parent = this._resolveWorkerParent();
-        const spawned: Node[] = [];
-
-        for (let i = 0; i < count; i += 1) {
-            const index = this._workerSeq++;
-            const pos = new Vec3(
-                base.x + (index % 5) * this.workerSpawnSpacing,
-                base.y,
-                base.z + Math.floor(index / 5) * this.workerSpawnSpacing,
-            );
-            const node = this._instantiateWorker(parent, prefab, appearance, index, pos);
-            if (node) {
-                spawned.push(node);
-                this._workers.add(node);
-            }
-        }
-
-        return { ok: spawned.length === count, workers: spawned };
-    }
-
-    private _grantWorkersAt(
-        count: number,
-        variant: WorkerRewardVariant,
-        positions: readonly Vec3[],
-        lookAtTarget?: Vec3,
-    ): { ok: boolean; workers: Node[] } {
-        if (positions.length === 0) {
-            return { ok: false, workers: [] };
-        }
-
-        const prefab = this._npcPrefab ?? this.workerPrefab;
-        if (!prefab) {
-            console.warn('[RewardManager] 工人预制体未就绪，请稍后再试');
-            return { ok: false, workers: [] };
-        }
-
-        const appearance = WORKER_APPEARANCE[variant];
-        const parent = this._resolveWorkerParent();
-        const island = director.getScene()?.getChildByName('Island') ?? null;
-        const spawned: Node[] = [];
-
-        for (let i = 0; i < count; i += 1) {
-            const index = this._workerSeq++;
-            const template = positions[i % positions.length];
-            const pos = IslandSurfaceSampler.snapWorldPositionToSurface(
-                template.clone(),
-                island,
-                0,
-            );
-            const node = this._instantiateWorker(parent, prefab, appearance, index, pos);
-            if (node) {
-                if (lookAtTarget) {
-                    this._faceTarget(node, lookAtTarget);
-                }
-                spawned.push(node);
-                this._workers.add(node);
-            }
-        }
-
-        return { ok: spawned.length === count, workers: spawned };
-    }
-
-    private _faceTarget(node: Node, target: Vec3): void {
-        const pos = node.worldPosition;
-        const dx = target.x - pos.x;
-        const dz = target.z - pos.z;
-        if (dx * dx + dz * dz < 1e-6) {
-            return;
-        }
-        const yaw = math.toDegree(Math.atan2(dx, dz));
-        const rot = new Quat();
-        Quat.fromEuler(rot, 0, yaw, 0);
-        node.setWorldRotation(rot);
-    }
-
-    private _instantiateWorker(
-        parent: Node,
-        prefab: Prefab,
-        appearance: CharacterAppearanceType,
-        index: number,
-        worldPos: Vec3,
-    ): Node | null {
-        const node = instantiate(prefab);
-        parent.addChild(node);
-        node.name = `Worker_${index}`;
-
-        const controller = node.getComponent(AppearanceController)
-            ?? node.addComponent(AppearanceController);
-        controller.setAppearance(appearance);
-
-        const anim = node.getComponent(CharacterAnimController)
-            ?? node.addComponent(CharacterAnimController);
-        anim.play(getDefaultAnimForAppearance(appearance));
-
-        node.setWorldPosition(worldPos);
-
-        node.addComponent(WorkerFruitCarrier);
-        node.addComponent(WorkerMovementController);
-        const ai = node.addComponent(WorkerAIController);
-        ai.setSpawnPosition(worldPos);
-
-        return node;
-    }
-
-    private _preloadWorkerPrefab(): void {
-        if (this.workerPrefab) {
-            this._npcPrefab = this.workerPrefab;
-            return;
-        }
-
-        resources.load(NPC_RIG_PREFAB_PATH, Prefab, (err, prefab) => {
-            if (!err && prefab) {
-                this._npcPrefab = prefab;
-                return;
-            }
-            assetManager.loadAny({ uuid: NPC_RIG_PREFAB_UUID, type: Prefab }, (err2, asset) => {
-                if (!err2 && asset) {
-                    this._npcPrefab = asset as Prefab;
-                } else {
-                    console.warn('[RewardManager] NPC_RIG 加载失败', err2 ?? err);
-                }
-            });
-        });
-    }
-
-    private _resolveWorkerParent(): Node {
-        if (this.workerParent?.isValid) {
-            return this.workerParent;
-        }
-        const island = director.getScene()?.getChildByName('Island');
-        if (island) {
-            let workers = island.getChildByName('Workers');
-            if (!workers) {
-                workers = new Node('Workers');
-                island.addChild(workers);
-            }
-            this.workerParent = workers;
-            return workers;
-        }
-        return director.getScene()!;
     }
 
     private _purgeInvalidWorkers(): void {

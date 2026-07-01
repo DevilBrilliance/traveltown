@@ -46,8 +46,7 @@ import { JuiceMachineSetup } from '../juice/JuiceMachineSetup';
 const { ccclass, property } = _decorator;
 
 /**
- * 游戏开始入口：启动时在指定位置创建主角（NPC_RIG / nv2）。
- * 请在编辑器中手动挂到场景节点（如 Main 或场景根下的 Game 节点）。
+ * 游戏开始入口：挂到场景 `start` 节点，进入场景后自动初始化并创建主角。
  */
 @ccclass('GameStart')
 export class GameStart extends Component {
