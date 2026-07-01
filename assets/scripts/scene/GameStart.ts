@@ -43,6 +43,10 @@ export class GameStart extends Component {
     @property({ type: Prefab, tooltip: '可选：拖入 resources/characters/NPC_RIG，加载失败时用此引用' })
     protagonistPrefab: Prefab | null = null;
 
+    //收银机obj
+    @property({ type: Node, tooltip: '收银机对象' })
+    cashRegisterObj: Node | null = null;
+
     private _protagonist: Node | null = null;
 
     onLoad() {
