@@ -17,10 +17,38 @@ export class FruitSource extends Component {
     zone: FruitCollectZone | null = null;
 
     private _collected = false;
+    private _reservedBy: Node | null = null;
     private _renderers: MeshRenderer[] = [];
 
     public get isAvailable(): boolean {
         return !this._collected && this.node.activeInHierarchy;
+    }
+
+    /** 是否被其他角色占用（收割预定） */
+    public isReservedByOther(reserver: Node): boolean {
+        return !!this._reservedBy?.isValid && this._reservedBy !== reserver;
+    }
+
+    public isReservedBy(reserver: Node): boolean {
+        return this._reservedBy === reserver;
+    }
+
+    /** 预定该株水果，成功返回 true */
+    public tryReserve(reserver: Node): boolean {
+        if (!this.isAvailable) {
+            return false;
+        }
+        if (this._reservedBy?.isValid && this._reservedBy !== reserver) {
+            return false;
+        }
+        this._reservedBy = reserver;
+        return true;
+    }
+
+    public releaseReservation(reserver: Node): void {
+        if (this._reservedBy === reserver) {
+            this._reservedBy = null;
+        }
     }
 
     /** 采集判定用的世界坐标（优先 Boluo 果实位置） */
@@ -51,6 +79,7 @@ export class FruitSource extends Component {
             return;
         }
         this._collected = true;
+        this._reservedBy = null;
         this._cacheRenderers();
         for (const renderer of this._renderers) {
             renderer.enabled = false;
@@ -61,6 +90,7 @@ export class FruitSource extends Component {
     /** 重置为可再次采集（调试或重生用） */
     public resetCollected(): void {
         this._collected = false;
+        this._reservedBy = null;
         this.node.active = true;
         this._cacheRenderers();
         for (const renderer of this._renderers) {

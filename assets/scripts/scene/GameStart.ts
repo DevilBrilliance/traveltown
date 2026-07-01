@@ -41,7 +41,7 @@ import { FruitCollectFieldSetup } from '../fruit/FruitCollectFieldSetup';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
-import { JUICE_MACHINE_ZONE_POSITION, JuiceMachineSetup } from '../juice/JuiceMachineSetup';
+import { JuiceMachineSetup } from '../juice/JuiceMachineSetup';
 
 const { ccclass, property } = _decorator;
 
@@ -61,7 +61,7 @@ export class GameStart extends Component {
     protagonistPrefab: Prefab | null = null;
 
     @property({ tooltip: '解锁工人购买区世界坐标' })
-    workerPurchasePosition = WORKER_PURCHASE_POSITION.clone();
+    workerPurchasePosition = new Vec3(26, 0, 3.5);
 
     @property({ tooltip: '解锁服务员购买区世界坐标' })
     cashierPurchasePosition = new Vec3(2, 0, -4);
@@ -150,7 +150,7 @@ export class GameStart extends Component {
         this._workerPurchaseZone = ensurePurchaseZone(
             island,
             'WorkerPurchaseZone',
-            this.workerPurchasePosition,
+            WORKER_PURCHASE_POSITION.clone(),
             {
                 costAmount: 100,
                 displayName: '工人',

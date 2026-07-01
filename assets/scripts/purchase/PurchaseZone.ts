@@ -20,6 +20,7 @@ import { OrderManager } from '../order/OrderManager';
 import { OrderSubjectType } from '../order/OrderSubjectType';
 import { RewardManager } from '../reward/RewardManager';
 import { WorkerRewardVariant } from '../reward/RewardType';
+import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import { PurchaseZoneView } from './PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from './PurchaseZonePaths';
 
@@ -81,6 +82,9 @@ export class PurchaseZone extends Component {
 
     @property({ tooltip: '余额不足时 UI 变暗' })
     dimWhenUnaffordable = false;
+
+    @property({ tooltip: '世界锚点（XZ 由 setup 写入，Y 贴地）' })
+    anchorWorldPosition = new Vec3();
 
     private _paidAmount = 0;
     private _completed = false;
@@ -148,10 +152,28 @@ export class PurchaseZone extends Component {
 
     /** 激活购买区（用于解锁链：前置完成后显示） */
     public activate(): void {
-        if (this._completed || this.node.active) {
+        if (this._completed) {
+            return;
+        }
+        this.resnapWorldPosition();
+        if (this.node.active) {
             return;
         }
         this.node.active = true;
+    }
+
+    /** 按锚点 XZ 重新贴地（与榨汁机投料区相同逻辑） */
+    public resnapWorldPosition(): void {
+        if (this.anchorWorldPosition.lengthSqr() < 1e-6) {
+            return;
+        }
+        const island = director.getScene()?.getChildByName('Island');
+        const snapped = IslandSurfaceSampler.snapWorldPositionToSurface(
+            this.anchorWorldPosition.clone(),
+            island,
+            0,
+        );
+        this.node.setWorldPosition(snapped);
     }
 
     // ─── private ─────────────────────────────────────────────────────────

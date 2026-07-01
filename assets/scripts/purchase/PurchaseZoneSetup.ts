@@ -58,6 +58,8 @@ export function ensurePurchaseZone(
         zone.workerSpawnPosition = config.workerSpawnPosition.clone();
     }
     zone.unlockTarget = config.unlockTarget ?? null;
+    zone.anchorWorldPosition = worldPosition.clone();
+    zone.resnapWorldPosition();
     if (!zone.isPurchased) {
         node.active = false;
     }
@@ -66,13 +68,7 @@ export function ensurePurchaseZone(
         if (!node.isValid) {
             return;
         }
-        node.setWorldPosition(
-            IslandSurfaceSampler.snapWorldPositionToSurface(
-                worldPosition.clone(),
-                parent,
-                0,
-            ),
-        );
+        zone.resnapWorldPosition();
     }, 0.2);
 
     return zone;

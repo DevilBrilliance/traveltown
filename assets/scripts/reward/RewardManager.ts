@@ -4,6 +4,7 @@ import {
     Component,
     director,
     instantiate,
+    js,
     math,
     Node,
     Prefab,
@@ -347,7 +348,22 @@ export class RewardManager extends Component {
         anim.play(getDefaultAnimForAppearance(appearance));
 
         node.setWorldPosition(worldPos);
+
+        this._attachWorkerComponents(node);
+
         return node;
+    }
+
+    private _attachWorkerComponents(node: Node): void {
+        const names = ['WorkerFruitCarrier', 'WorkerMovementController', 'WorkerAIController'];
+        for (const name of names) {
+            const cls = js.getClassByName(name);
+            if (cls) {
+                node.addComponent(cls as typeof Component);
+            } else {
+                console.warn(`[RewardManager] 未找到工人组件: ${name}`);
+            }
+        }
     }
 
     private _preloadWorkerPrefab(): void {

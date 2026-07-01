@@ -172,6 +172,48 @@ export class JuiceMachine extends Component {
         return this._storedPineapples < this.bufferCapacity;
     }
 
+    /** 角色是否在投料范围内（玩家/工人） */
+    public isActorInDepositRange(actor: Node): boolean {
+        return this._isActorInDepositRange(actor);
+    }
+
+    /** 获取投料区世界参考点 */
+    public getDepositWorldPosition(out: Vec3): Vec3 {
+        this.node.getWorldPosition(out);
+        return out;
+    }
+
+    /**
+     * 从背篓向机器投菠萝（工人/玩家共用）
+     * @returns 本帧实际投入数量
+     */
+    public depositFromCarrier(
+        carrier: { pineappleCount: number; removeOnePineapple(): boolean },
+        dt: number,
+    ): number {
+        if (!this.canDeposit || carrier.pineappleCount <= 0) {
+            return 0;
+        }
+
+        const room = this.bufferCapacity - this._storedPineapples;
+        const maxThisFrame = Math.max(1, Math.floor(this.depositPerSecond * dt));
+        const count = Math.min(room, carrier.pineappleCount, maxThisFrame);
+        let deposited = 0;
+
+        for (let i = 0; i < count; i += 1) {
+            if (!carrier.removeOnePineapple()) {
+                break;
+            }
+            this._storedPineapples++;
+            deposited += 1;
+        }
+
+        if (deposited > 0) {
+            this._refreshUI();
+        }
+        return deposited;
+    }
+
     public get isProducing(): boolean {
         return this._storedPineapples > 0 && this._glassCount < this.maxGlassCount;
     }
@@ -244,17 +286,7 @@ export class JuiceMachine extends Component {
             return;
         }
 
-        const room = this.bufferCapacity - this._storedPineapples;
-        const maxThisFrame = Math.max(1, Math.floor(this.depositPerSecond * dt));
-        const count = Math.min(room, carrier.pineappleCount, maxThisFrame);
-
-        for (let i = 0; i < count; i++) {
-            if (!carrier.removeOnePineapple()) {
-                break;
-            }
-            this._storedPineapples++;
-        }
-        this._refreshUI();
+        this.depositFromCarrier(carrier, dt);
     }
 
     private _updateProduction(dt: number): void {
@@ -403,8 +435,8 @@ export class JuiceMachine extends Component {
         });
     }
 
-    private _isPlayerInRange(player: Node): boolean {
-        const pp = player.worldPosition;
+    private _isActorInDepositRange(actor: Node): boolean {
+        const pp = actor.worldPosition;
         if (JuiceRackBounds.isPointNearNode(this.node, pp.x, pp.z, this.zoneTriggerMargin)) {
             return true;
         }
@@ -419,6 +451,10 @@ export class JuiceMachine extends Component {
             );
         }
         return false;
+    }
+
+    private _isPlayerInRange(player: Node): boolean {
+        return this._isActorInDepositRange(player);
     }
 
     private _resolvePlayer(): Node | null {

@@ -35,7 +35,7 @@
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 3282
+      "__id__": 3281
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -66,7 +66,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 3283
+      "__id__": 3282
     },
     "_id": "57b4f1f1-8d76-4cea-8749-52f56b67df18"
   },
@@ -49028,7 +49028,6 @@
     "__type__": "b1281FOBrhPrYgns2TUTDvz",
     "_name": "",
     "_objFlags": 0,
-    "__editorExtras__": {},
     "node": {
       "__id__": 3243
     },
@@ -50058,7 +50057,7 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 3281
+        "__id__": 3291
       }
     ],
     "_prefab": null,
@@ -50090,50 +50089,6 @@
       "z": 0
     },
     "_id": "d7Id1/dP5MHaNoMI4fXsbE"
-  },
-  {
-    "__type__": "a2b3cTV5vdIkKEjtFZ4kKvN",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 3280
-    },
-    "_enabled": true,
-    "__prefab": null,
-    "autoStart": true,
-    "spawnPosition": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "protagonistPrefab": null,
-    "workerPurchasePosition": {
-      "__type__": "cc.Vec3",
-      "x": 6,
-      "y": 0,
-      "z": -4
-    },
-    "cashierPurchasePosition": {
-      "__type__": "cc.Vec3",
-      "x": 2,
-      "y": 0,
-      "z": -4
-    },
-    "cashierSpawnPosition": {
-      "__type__": "cc.Vec3",
-      "x": -3,
-      "y": 0,
-      "z": 5
-    },
-    "juiceMachinePosition": {
-      "__type__": "cc.Vec3",
-      "x": 26,
-      "y": 0,
-      "z": -10
-    },
-    "_id": "ebUlpJ9XlIvpsHqoKtwUwY"
   },
   {
     "__type__": "cc.PrefabInfo",
@@ -51144,28 +51099,28 @@
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 3284
+      "__id__": 3283
     },
     "shadows": {
-      "__id__": 3285
+      "__id__": 3284
     },
     "_skybox": {
-      "__id__": 3286
+      "__id__": 3285
     },
     "fog": {
-      "__id__": 3287
+      "__id__": 3286
     },
     "octree": {
-      "__id__": 3288
+      "__id__": 3287
     },
     "skin": {
-      "__id__": 3289
+      "__id__": 3288
     },
     "lightProbeInfo": {
-      "__id__": 3290
+      "__id__": 3289
     },
     "postSettings": {
-      "__id__": 3291
+      "__id__": 3290
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false
@@ -51325,5 +51280,49 @@
   {
     "__type__": "cc.PostSettingsInfo",
     "_toneMappingType": 0
+  },
+  {
+    "__type__": "a2b3cTV5vdIkKEjtFZ4kKvN",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 3280
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "autoStart": true,
+    "spawnPosition": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "protagonistPrefab": null,
+    "workerPurchasePosition": {
+      "__type__": "cc.Vec3",
+      "x": 26,
+      "y": 0,
+      "z": 3.5
+    },
+    "cashierPurchasePosition": {
+      "__type__": "cc.Vec3",
+      "x": 2,
+      "y": 0,
+      "z": -4
+    },
+    "cashierSpawnPosition": {
+      "__type__": "cc.Vec3",
+      "x": -3,
+      "y": 0,
+      "z": 5
+    },
+    "juiceMachinePosition": {
+      "__type__": "cc.Vec3",
+      "x": 26,
+      "y": 0,
+      "z": -10
+    },
+    "_id": "ebUlpJ9XlIvpsHqoKtwUwY"
   }
 ]
