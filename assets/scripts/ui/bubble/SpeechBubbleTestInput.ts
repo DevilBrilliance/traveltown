@@ -40,8 +40,8 @@ export class SpeechBubbleTestInput extends Component {
     @property({ tooltip: '测试数量' })
     testAmount = 3;
 
-    @property({ tooltip: '相对玩家本地坐标头顶偏移' })
-    localOffset = new Vec3(0, 2.1, 0);
+    @property({ tooltip: '相对玩家本地坐标头顶偏移（脚底 pivot 时 Y≈4）' })
+    localOffset = new Vec3(0, 4, 0);
 
     private _visible = false;
 

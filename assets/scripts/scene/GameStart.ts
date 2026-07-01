@@ -118,14 +118,14 @@ export class GameStart extends Component {
         spawner.lookAtTarget.set(0, 0, 0);
         spawner.spawnFromConfigs([
             {
-                position: new Vec3(-15, 0, 3),
+                position: new Vec3(-12, 0, 3),
                 appearance: CharacterAppearanceType.Customer0,
                 requirements: [{ type: CurrencyType.PineappleJuice, amount: 3 }],
                 subjectId: 'Customer_0',
                 displayName: '顾客',
             },
             {
-                position: new Vec3(-15, 0, -3),
+                position: new Vec3(-12, 0, -3),
                 appearance: CharacterAppearanceType.Customer1,
                 requirements: [{ type: CurrencyType.PineappleJuice, amount: 5 }],
                 subjectId: 'Customer_1',

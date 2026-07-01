@@ -22,6 +22,12 @@ interface FenceAabb {
     halfExtents: Vec3;
 }
 
+interface SceneOccluderAabb {
+    center: Vec3;
+    halfExtents: Vec3;
+    node: Node;
+}
+
 /**
  * 栅栏碰撞：收集 Island 下所有栅栏模型的世界 AABB，阻挡玩家穿过。
  * 不再使用沙滩矩形空气墙。
@@ -57,6 +63,7 @@ export class PlayAreaBoundary extends Component {
     private readonly _corner = new Vec3();
     private readonly _worldCorner = new Vec3();
     private readonly _fenceAabbs: FenceAabb[] = [];
+    private readonly _sceneOccluderAabbs: SceneOccluderAabb[] = [];
     private _ready = false;
     private _rebuildAttempts = 0;
 
@@ -77,6 +84,7 @@ export class PlayAreaBoundary extends Component {
 
     public rebuild(): void {
         this._fenceAabbs.length = 0;
+        this._sceneOccluderAabbs.length = 0;
         this._resolveFenceRoot();
 
         const island = director.getScene()?.getChildByName('Island');
@@ -107,6 +115,8 @@ export class PlayAreaBoundary extends Component {
             });
         }
 
+        this._collectSceneOccluders(island);
+
         if (this._fenceAabbs.length === 0) {
             this._rebuildAttempts += 1;
             if (this._rebuildAttempts <= 8) {
@@ -136,6 +146,163 @@ export class PlayAreaBoundary extends Component {
                 this._resolveCircleAabbXZ(pos, r, box);
             }
         }
+    }
+
+    /**
+     * 线段 from→to 是否被栅栏 AABB 遮挡（用于头顶气泡等）
+     * @param margin 目标点前预留距离，避免贴脸误判
+     */
+    public isLineOccludedByFences(from: Vec3, to: Vec3, margin = 0.35): boolean {
+        return this.isLineOccluded(from, to, margin);
+    }
+
+    /**
+     * 线段 from→to 是否被场景物体（栅栏/建筑等）遮挡。
+     * @param ignoreNodes 忽略这些节点及其子节点上的碰撞体（如角色自身）
+     */
+    public isLineOccluded(
+        from: Vec3,
+        to: Vec3,
+        margin = 0.35,
+        ignoreNodes: Node[] = [],
+    ): boolean {
+        if (!this._ready) {
+            return false;
+        }
+        const dir = new Vec3();
+        Vec3.subtract(dir, to, from);
+        const maxDist = dir.length();
+        if (maxDist < 1e-4) {
+            return false;
+        }
+        dir.multiplyScalar(1 / maxDist);
+        const checkDist = Math.max(0, maxDist - margin);
+
+        for (const box of this._fenceAabbs) {
+            if (PlayAreaBoundary._rayIntersectsAabb(from, dir, box, checkDist)) {
+                return true;
+            }
+        }
+        for (const box of this._sceneOccluderAabbs) {
+            if (this._isUnderIgnore(box.node, ignoreNodes)) {
+                continue;
+            }
+            if (PlayAreaBoundary._rayIntersectsAabb(from, dir, box, checkDist)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static _rayIntersectsAabb(
+        origin: Vec3,
+        dir: Vec3,
+        box: FenceAabb,
+        maxDist: number,
+    ): boolean {
+        const minX = box.center.x - box.halfExtents.x;
+        const maxX = box.center.x + box.halfExtents.x;
+        const minY = box.center.y - box.halfExtents.y;
+        const maxY = box.center.y + box.halfExtents.y;
+        const minZ = box.center.z - box.halfExtents.z;
+        const maxZ = box.center.z + box.halfExtents.z;
+
+        let tmin = 0;
+        let tmax = maxDist;
+
+        const axes = [
+            { o: origin.x, d: dir.x, min: minX, max: maxX },
+            { o: origin.y, d: dir.y, min: minY, max: maxY },
+            { o: origin.z, d: dir.z, min: minZ, max: maxZ },
+        ];
+
+        for (const { o, d, min, max } of axes) {
+            if (Math.abs(d) < 1e-8) {
+                if (o < min || o > max) {
+                    return false;
+                }
+                continue;
+            }
+            const inv = 1 / d;
+            let t1 = (min - o) * inv;
+            let t2 = (max - o) * inv;
+            if (t1 > t2) {
+                const tmp = t1;
+                t1 = t2;
+                t2 = tmp;
+            }
+            tmin = Math.max(tmin, t1);
+            tmax = Math.min(tmax, t2);
+            if (tmin > tmax) {
+                return false;
+            }
+        }
+        return tmax >= 0 && tmin <= maxDist;
+    }
+
+    private _collectSceneOccluders(island: Node): void {
+        const seen = new Set<MeshRenderer>();
+        for (const renderer of island.getComponentsInChildren(MeshRenderer)) {
+            if (seen.has(renderer) || !renderer.node.activeInHierarchy) {
+                continue;
+            }
+            if (this._shouldExcludeOccluderByName(renderer.node)) {
+                continue;
+            }
+            if (!this._readWorldAabb(renderer, this._tmpAabb)) {
+                continue;
+            }
+            if (this._isFlatGroundAabb(this._tmpAabb)) {
+                continue;
+            }
+            seen.add(renderer);
+            const pad = this.fencePadding;
+            this._sceneOccluderAabbs.push({
+                node: renderer.node,
+                center: this._tmpAabb.center.clone(),
+                halfExtents: new Vec3(
+                    this._tmpAabb.halfExtents.x + pad,
+                    this._tmpAabb.halfExtents.y + pad,
+                    this._tmpAabb.halfExtents.z + pad,
+                ),
+            });
+        }
+    }
+
+    private _shouldExcludeOccluderByName(node: Node): boolean {
+        let current: Node | null = node;
+        while (current) {
+            const name = current.name;
+            if (name === 'Protagonist' || /^Customer/i.test(name)) {
+                return true;
+            }
+            if (/DiBan/i.test(name)) {
+                return true;
+            }
+            current = current.parent;
+        }
+        return false;
+    }
+
+    private _isFlatGroundAabb(aabb: geometry.AABB): boolean {
+        const { halfExtents } = aabb;
+        return halfExtents.y < 0.25 && halfExtents.x > 3 && halfExtents.z > 3;
+    }
+
+    private _isUnderIgnore(node: Node, ignoreNodes: Node[]): boolean {
+        for (const root of ignoreNodes) {
+            if (!root?.isValid) {
+                continue;
+            }
+            let current: Node | null = node;
+            while (current) {
+                if (current === root) {
+                    return true;
+                }
+                current = current.parent;
+            }
+        }
+        return false;
     }
 
     private _collectFenceRenderers(island: Node, seen: Set<MeshRenderer>): void {

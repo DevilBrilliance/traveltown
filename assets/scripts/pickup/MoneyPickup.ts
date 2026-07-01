@@ -17,7 +17,7 @@ const { ccclass, property } = _decorator;
 @ccclass('MoneyPickup')
 export class MoneyPickup extends Component {
     @property({ tooltip: '拾取半径（XZ 平面距离）' })
-    collectRadius = 0.5;
+    collectRadius = 1.2;
 
     @property({ tooltip: '拾取获得金币数量' })
     amount = 10;

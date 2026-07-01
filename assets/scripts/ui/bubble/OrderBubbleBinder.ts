@@ -14,8 +14,8 @@ const { ccclass, property } = _decorator;
  */
 @ccclass('OrderBubbleBinder')
 export class OrderBubbleBinder extends Component {
-    @property({ tooltip: '相对需求者本地坐标头顶偏移' })
-    localOffset = new Vec3(0, 2.1, 0);
+    @property({ tooltip: '相对目标本地坐标头顶偏移（脚底 pivot 时 Y≈4）' })
+    localOffset = new Vec3(0, 4, 0);
 
     private _bubbleMgr: SpeechBubbleManager | null = null;
     private readonly _bubbleIds = new Map<string, string>();
