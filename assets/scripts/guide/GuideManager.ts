@@ -5,8 +5,6 @@ import {
     Node,
     Vec3,
 } from 'cc';
-import { FruitType } from '../fruit/FruitType';
-import { PineappleFieldHelper } from '../fruit/PineappleFieldHelper';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { GuideArrow } from './GuideArrow';
 import { DEFAULT_GUIDE_TASKS } from './GuideTaskConfig';
@@ -56,8 +54,6 @@ export class GuideManager extends Component {
     private _arrowRoot: Node | null = null;
     private _configs: GuideTaskConfig[] = DEFAULT_GUIDE_TASKS;
     private _started = false;
-
-    private readonly _tmpPos = new Vec3();
 
     onLoad(): void {
         if (GuideManager._instance && GuideManager._instance !== this) {
@@ -181,8 +177,18 @@ export class GuideManager extends Component {
             this._arrow?.clearTarget();
             return;
         }
-        const targetNode = this._resolveTargetNode(task.target);
-        const offset = task.target.worldOffset ?? new Vec3(0, 2, 0);
+
+        const target = task.target;
+        if (target.fixedWorldPosition) {
+            this._arrow?.setFixedPose(
+                target.fixedWorldPosition,
+                target.fixedWorldEuler ?? Vec3.ZERO,
+            );
+            return;
+        }
+
+        const offset = target.worldOffset ?? new Vec3(0, 2, 0);
+        const targetNode = this._resolveTargetNode(target);
         this._arrow?.setTarget(targetNode, offset);
     }
 
@@ -192,13 +198,6 @@ export class GuideManager extends Component {
             return null;
         }
         return this._taskMap.get(firstId) ?? null;
-    }
-
-    update(): void {
-        if (!this.enabledGuide || this._activeTasks.size === 0) {
-            return;
-        }
-        this._refreshArrowTarget();
     }
 
     private _resolveTargetNode(target: GuideTargetConfig): Node | null {
@@ -242,22 +241,10 @@ export class GuideManager extends Component {
             case GuideDynamicTarget.PineappleField:
                 return GameSceneRefs.pineappleField;
             case GuideDynamicTarget.FirstPineapple:
-                return this._resolveFirstPineappleNode();
+                return GameSceneRefs.pineappleField;
             default:
                 return null;
         }
-    }
-
-    private _resolveFirstPineappleNode(): Node | null {
-        const actor = GameSceneRefs.protagonist;
-        if (actor?.isValid) {
-            actor.getWorldPosition(this._tmpPos);
-            const source = PineappleFieldHelper.findNearestPineapple(actor, this._tmpPos, false);
-            if (source?.node?.isValid) {
-                return source.node;
-            }
-        }
-        return GameSceneRefs.pineappleField;
     }
 
     private _matchCondition(cond: GuideCondition, payload: GuideNotifyPayload): boolean {

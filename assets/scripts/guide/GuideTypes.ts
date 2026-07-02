@@ -60,6 +60,10 @@ export interface GuideTargetConfig {
     dynamicKey?: GuideDynamicTarget;
     /** 箭头相对目标世界坐标的偏移 */
     worldOffset?: Vec3;
+    /** 固定世界坐标（直接摆放箭头，用于菠萝等） */
+    fixedWorldPosition?: Vec3;
+    /** 固定世界欧拉角 */
+    fixedWorldEuler?: Vec3;
 }
 
 /** 引导任务配置 */

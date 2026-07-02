@@ -35,7 +35,8 @@ export const DEFAULT_GUIDE_TASKS: GuideTaskConfig[] = [
         target: {
             kind: GuideTargetKind.Dynamic,
             dynamicKey: GuideDynamicTarget.FirstPineapple,
-            worldOffset: new Vec3(0, 2, 0),
+            fixedWorldPosition: new Vec3(24, 1.5, 3.5),
+            fixedWorldEuler: new Vec3(-90, 90, 0),
         },
     },
     {

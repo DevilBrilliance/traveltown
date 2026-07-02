@@ -72,6 +72,33 @@ export class PineappleFieldHelper {
         return best;
     }
 
+    /** 查找离指定世界坐标最近的可用菠萝（不预定） */
+    public static findNearestPineappleToWorldPos(refWorldPos: Vec3): FruitSource | null {
+        let best: FruitSource | null = null;
+        let bestDistSq = Infinity;
+
+        for (const zone of FruitCollectZone.all) {
+            if (zone.fruitType !== FruitType.Pineapple) {
+                continue;
+            }
+            for (const source of zone.sources) {
+                if (!source.isAvailable) {
+                    continue;
+                }
+                source.getCollectWorldPosition(_fruitPos);
+                const dx = refWorldPos.x - _fruitPos.x;
+                const dz = refWorldPos.z - _fruitPos.z;
+                const distSq = dx * dx + dz * dz;
+                if (distSq < bestDistSq) {
+                    bestDistSq = distSq;
+                    best = source;
+                }
+            }
+        }
+
+        return best;
+    }
+
     public static releaseIfReserved(source: FruitSource | null, worker: Node): void {
         source?.releaseReservation(worker);
     }
