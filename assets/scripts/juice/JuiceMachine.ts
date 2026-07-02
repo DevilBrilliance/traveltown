@@ -31,7 +31,7 @@ import {
 const { ccclass, property } = _decorator;
 
 /**
- * 榨汁机：玩家投菠萝（最多 24），UI 常驻；有料时运行并每 1 秒产一杯汁到 ZhaLan_Box。
+ * 榨汁机：玩家投菠萝（最多 24），UI 常驻；有料时运行并每 0.5 秒产一杯汁到 ZhaLan_Box。
  */
 @ccclass('JuiceMachine')
 export class JuiceMachine extends Component {
@@ -42,7 +42,7 @@ export class JuiceMachine extends Component {
     maxGlassCount = 24;
 
     @property({ tooltip: '产出间隔（秒）' })
-    produceInterval = 1;
+    produceInterval = 0.5;
 
     @property({ type: Node, tooltip: '果汁杯摆放父节点（ZhaLan_Box）' })
     outputRack: Node | null = null;

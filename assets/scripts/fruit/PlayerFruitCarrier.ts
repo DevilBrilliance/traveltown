@@ -60,8 +60,7 @@ export class PlayerFruitCarrier extends Component {
 
 
     @property({ tooltip: '两次采集间隔（秒）' })
-
-    collectInterval = 0.35;
+    collectInterval = 0.175;
 
 
 
