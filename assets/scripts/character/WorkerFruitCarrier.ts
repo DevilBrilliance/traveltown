@@ -133,9 +133,7 @@ export class WorkerFruitCarrier extends Component {
         if (this._isHarvesting) {
             return CharacterAnimState.Harvest;
         }
-        if (this.carriedCount > 0) {
-            return moving ? CharacterAnimState.PlateRun : CharacterAnimState.PlateIdle;
-        }
+        // 背上菠萝仍用普通跑步/待机，端盘动作仅留给服务员端果汁
         return moving ? CharacterAnimState.PlayerRun : CharacterAnimState.PlayerIdle;
     }
 

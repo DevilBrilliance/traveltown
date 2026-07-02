@@ -131,7 +131,9 @@ export class WorkerAIController extends Component {
 
         if (!PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
             this._clearTarget();
-            this._setState(WorkerAIState.IdleAtSpawn);
+            this._setState(this._shouldGoDeposit()
+                ? WorkerAIState.GoToSpawnForDeposit
+                : WorkerAIState.IdleAtSpawn);
             return;
         }
 
@@ -147,7 +149,9 @@ export class WorkerAIController extends Component {
 
         if (!this._targetSource) {
             this._movement?.setMoving(false);
-            this._setState(WorkerAIState.IdleAtSpawn);
+            this._setState(this._shouldGoDeposit()
+                ? WorkerAIState.GoToSpawnForDeposit
+                : WorkerAIState.IdleAtSpawn);
             return;
         }
 
@@ -184,12 +188,12 @@ export class WorkerAIController extends Component {
 
         if (!this._targetSource?.isAvailable) {
             this._clearTarget();
-            if (carrier.isFull) {
+            if (this._shouldGoDeposit()) {
                 this._setState(WorkerAIState.GoToSpawnForDeposit);
-            } else if (!PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
-                this._setState(WorkerAIState.IdleAtSpawn);
-            } else {
+            } else if (PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
                 this._setState(WorkerAIState.SeekPineapple);
+            } else {
+                this._setState(WorkerAIState.IdleAtSpawn);
             }
             return;
         }
@@ -216,7 +220,9 @@ export class WorkerAIController extends Component {
 
         if (!PineappleFieldHelper.hasHarvestablePineappleFor(this.node)) {
             this._clearTarget();
-            this._setState(WorkerAIState.IdleAtSpawn);
+            this._setState(this._shouldGoDeposit()
+                ? WorkerAIState.GoToSpawnForDeposit
+                : WorkerAIState.IdleAtSpawn);
             return;
         }
 
@@ -248,6 +254,7 @@ export class WorkerAIController extends Component {
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
             this._setState(this._nextStateAfterEmptyBackpack());
+            this._movement?.refreshAnim();
             return;
         }
 
@@ -279,6 +286,7 @@ export class WorkerAIController extends Component {
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
             this._setState(this._nextStateAfterEmptyBackpack());
+            this._movement?.refreshAnim();
             return;
         }
 
@@ -321,6 +329,7 @@ export class WorkerAIController extends Component {
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
             this._setState(this._nextStateAfterEmptyBackpack());
+            this._movement?.refreshAnim();
             return;
         }
 
@@ -347,7 +356,7 @@ export class WorkerAIController extends Component {
     private _updateIdleAtSpawn(dt: number): void {
         const carrier = this._carrier!;
 
-        if (carrier.isFull) {
+        if (this._shouldGoDeposit()) {
             this._setState(WorkerAIState.GoToSpawnForDeposit);
             return;
         }
@@ -381,6 +390,18 @@ export class WorkerAIController extends Component {
             : WorkerAIState.IdleAtSpawn;
     }
 
+    private _shouldGoDeposit(): boolean {
+        const carrier = this._carrier!;
+        const machine = this.juiceMachine;
+        if (!machine?.isActivated || carrier.pineappleCount <= 0) {
+            return false;
+        }
+        if (carrier.isFull) {
+            return true;
+        }
+        return !PineappleFieldHelper.hasHarvestablePineappleFor(this.node);
+    }
+
     private _isAtSpawn(): boolean {
         const pos = this.node.worldPosition;
         const dx = pos.x - this.spawnPosition.x;
@@ -398,6 +419,7 @@ export class WorkerAIController extends Component {
         if (carrier.pineappleCount <= 0) {
             this._movement?.setMoving(false);
             this._setState(this._nextStateAfterEmptyBackpack());
+            this._movement?.refreshAnim();
             return;
         }
 
