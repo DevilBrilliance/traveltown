@@ -537,8 +537,8 @@ export class GameStart extends Component {
         }
         spawner.npcPrefab = this.protagonistPrefab;
         spawner.lookAtTarget.set(0, 0, 0);
-        const customer2Pos = new Vec3(10, 0, 22);
-        const customer3Pos = new Vec3(13, 0, 22);
+        const customer2Pos = new Vec3(6, 0, 24);
+        const customer3Pos = new Vec3(12, 0, 24);
         spawner.appendFromConfigs([
             {
                 position: customer2Pos,
