@@ -9,6 +9,7 @@ import {
 import { rollCustomerJuiceRequirement } from '../order/CustomerOrderHelper';
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAppearanceType } from '../character/CharacterAppearanceType';
+import { CharacterAnimState } from '../character/CharacterAnimState';
 import { PlayerMovementController } from '../character/PlayerMovementController';
 import { CameraOrbitController } from '../camera/CameraOrbitController';
 import { bindCameraTouchUI } from '../camera/CameraTouchUISetup';
@@ -238,6 +239,7 @@ export class GameStart extends Component {
                 grantWorkerVariant: WorkerRewardVariant.WorkerNv1,
                 grantStaffRole: StaffRole.Waiter,
                 workerSpawnPosition: this.cashierSpawnPosition,
+                worldYReference: this.counterPurchaseZone,
             },
         );
         this._cashierPurchaseZone.node.on('purchase-zone-ui-closed', this._onWaiterUnlocked, this);
@@ -259,6 +261,7 @@ export class GameStart extends Component {
                 displayName: '扩地',
                 orderSubjectId: 'Unlock_LandExpansion',
                 rewardIconPath: PURCHASE_LAND_EXPANSION_ICON_PATH,
+                worldYReference: this._workerPurchaseZone?.node ?? null,
             },
         );
         this._landExpansionZone.node.on('purchase-zone-ui-closed', this._onLandExpansionUnlocked, this);
@@ -333,11 +336,13 @@ export class GameStart extends Component {
     }
 
     private _onWorkerUnlocked(): void {
+        this._cashierPurchaseZone?.resnapWorldPosition();
         this._cashierPurchaseZone?.activate();
     }
 
     private _onWaiterUnlocked(): void {
         this._unlockCounter2();
+        this._landExpansionZone?.resnapWorldPosition();
         this._landExpansionZone?.activate();
     }
 
@@ -408,6 +413,8 @@ export class GameStart extends Component {
                 requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_2',
                 displayName: '顾客',
+                showDuck: false,
+                idleAnim: CharacterAnimState.PlayerIdle,
             },
             {
                 position: new Vec3(13, 0, 22),
@@ -415,6 +422,8 @@ export class GameStart extends Component {
                 requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_3',
                 displayName: '顾客',
+                showDuck: false,
+                idleAnim: CharacterAnimState.PlayerIdle,
             },
         ]);
     }

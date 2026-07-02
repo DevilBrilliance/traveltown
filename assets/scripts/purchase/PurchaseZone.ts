@@ -63,6 +63,9 @@ export class PurchaseZone extends Component {
     @property({ type: Node, tooltip: '购买后激活的节点（如 SYJ 收银台）' })
     unlockTarget: Node | null = null;
 
+    @property({ type: Node, tooltip: '世界 Y 对齐参考节点（贴地采样不准时用）' })
+    worldYReference: Node | null = null;
+
     @property({ type: Prefab, tooltip: '购买区 UI 预制体（PurchaseZoneUI），不填则自动加载' })
     uiPrefab: Prefab | null = null;
 
@@ -183,12 +186,19 @@ export class PurchaseZone extends Component {
     private _resnapToIsland(island?: Node | null): void {
         const islandNode = island ?? this.node.parent ?? GameSceneRefs.island;
         const anchor = this._resolveAnchorWorldPosition();
-        const snapped = IslandSurfaceSampler.snapWorldPositionToSurface(
-            anchor,
-            islandNode,
-            0,
-        );
-        this.node.setWorldPosition(snapped);
+        let worldY = anchor.y;
+        if (this.worldYReference?.isValid) {
+            worldY = this.worldYReference.worldPosition.y;
+        } else {
+            const snapped = IslandSurfaceSampler.snapWorldPositionToSurface(
+                anchor,
+                islandNode,
+                0,
+            );
+            worldY = snapped.y;
+        }
+        this.node.setWorldPosition(anchor.x, worldY, anchor.z);
+        this.anchorWorldPosition.set(anchor.x, worldY, anchor.z);
     }
 
     private _resolveAnchorWorldPosition(): Vec3 {

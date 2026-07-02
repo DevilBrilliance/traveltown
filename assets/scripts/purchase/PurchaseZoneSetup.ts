@@ -15,6 +15,8 @@ export interface PurchaseZoneConfig {
     workerSpawnPositions?: readonly Vec3[];
     workerLookAtTarget?: Vec3;
     unlockTarget?: Node | null;
+    /** 世界 Y 与参考节点对齐（贴地采样不准时使用） */
+    worldYReference?: Node | null;
 }
 
 function schedulePurchaseZoneResnaps(zone: PurchaseZone, island: Node, anchor: Vec3): void {
@@ -67,6 +69,7 @@ export function ensurePurchaseZone(
         zone.workerSpawnPosition = config.workerSpawnPosition.clone();
     }
     zone.unlockTarget = config.unlockTarget ?? null;
+    zone.worldYReference = config.worldYReference ?? null;
     zone.applyWorldAnchor(anchor, parent);
     if (!zone.isPurchased) {
         node.active = false;

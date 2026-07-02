@@ -32,6 +32,10 @@ export interface CustomerSpawnConfig {
     requirements: CurrencyCost[];
     subjectId?: string;
     displayName?: string;
+    /** 是否显示鸭子，不填则用 Spawner 默认值 */
+    showDuck?: boolean;
+    /** 待机动作，不填则用顾客待机 */
+    idleAnim?: CharacterAnimState;
 }
 
 /** 在圆内均匀随机一点（XZ 平面） */
@@ -141,14 +145,15 @@ export class CustomerSpawner extends Component {
                     characterNode.setWorldPosition(pos);
                     this._faceTarget(characterNode, this.lookAtTarget);
 
-                    if (this.showDuck) {
+                    if (config.showDuck ?? this.showDuck) {
                         controller.enableDuck(this.duckVariant);
                     }
 
+                    const idleAnim = config.idleAnim ?? CharacterAnimState.CustomerIdle;
                     const anim = characterNode.getComponent(CharacterAnimController)
                         ?? characterNode.addComponent(CharacterAnimController);
-                    anim.defaultState = CharacterAnimState.CustomerIdle;
-                    anim.play(CharacterAnimState.CustomerIdle);
+                    anim.defaultState = idleAnim;
+                    anim.play(idleAnim);
 
                     if (config.requirements.length > 0) {
                         this._bindOrder(characterNode, config, index);
