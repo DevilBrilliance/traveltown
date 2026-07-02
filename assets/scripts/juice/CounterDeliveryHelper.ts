@@ -5,19 +5,32 @@ import { GameSceneRefs } from '../scene/GameSceneRefs';
 /** 收银台服务区节点名（ZuoZi 子节点） */
 export const COUNTER_SERVICE_NODE_NAME = 'SYT';
 
+/** 收银台二服务区节点名（ZuoZi-001 子节点，找不到则退回 SYT / ZuoZi） */
+export const COUNTER2_SERVICE_NODE_NAME = 'SYT2';
+
 /** 默认交付范围（世界单位，相对 ZuoZi） */
 export const COUNTER_DELIVERY_RADIUS = 2;
 
 const _counterPos = new Vec3();
 
-/** 在 ZuoZi 下查找 SYT（收银台），找不到则退回 ZuoZi */
+/** 在 ZuoZi 下查找 SYT / SYT2（收银台），找不到则退回 ZuoZi */
 export function resolveCounterServiceNode(counterRoot: Node | null): Node | null {
     if (!counterRoot?.isValid) {
         return null;
     }
-    const syt = findDescendantByName(counterRoot, COUNTER_SERVICE_NODE_NAME)
-        ?? findDescendantByNameIgnoreCase(counterRoot, COUNTER_SERVICE_NODE_NAME);
-    return syt?.isValid ? syt : counterRoot;
+    const isCounter2 = /^ZuoZi-001$/i.test(counterRoot.name)
+        || counterRoot === GameSceneRefs.counter2DeliveryNode;
+    const preferredNames = isCounter2
+        ? [COUNTER2_SERVICE_NODE_NAME, COUNTER_SERVICE_NODE_NAME]
+        : [COUNTER_SERVICE_NODE_NAME, COUNTER2_SERVICE_NODE_NAME];
+    for (const name of preferredNames) {
+        const syt = findDescendantByName(counterRoot, name)
+            ?? findDescendantByNameIgnoreCase(counterRoot, name);
+        if (syt?.isValid) {
+            return syt;
+        }
+    }
+    return counterRoot;
 }
 
 /** 收银台果汁交付点（ZuoZi，优先读 GameSceneRefs） */

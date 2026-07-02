@@ -5,6 +5,7 @@ import {
     Vec3,
 } from 'cc';
 import { hasPendingCustomerJuiceOrder, resolvePendingOrderDeliveryNode } from '../order/CustomerOrderHelper';
+import { resolveCounterServiceNode } from '../juice/CounterDeliveryHelper';
 import { BoundaryNavigator } from '../navigation/BoundaryNavigator';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
@@ -48,6 +49,8 @@ export class WaiterAIController extends Component {
     private _state = WaiterAIState.IdleAtSpawn;
     private _afterWaypointState = WaiterAIState.IdleAtSpawn;
     private _lastDeliveryWasCounter2 = false;
+    /** 本轮前往/离开收银台二是否已经过途经点 */
+    private _counter2WaypointPassed = false;
     private _tray: PlayerJuiceTrayCarrier | null = null;
     private _movement: WaiterMovementController | null = null;
 
@@ -173,6 +176,7 @@ export class WaiterAIController extends Component {
         this._movement?.setMoving(move.moving);
         if (move.arrived || this._isNearCounter2Waypoint()) {
             this._movement?.setMoving(false);
+            this._counter2WaypointPassed = true;
             this._setState(this._afterWaypointState);
         }
     }
@@ -206,8 +210,13 @@ export class WaiterAIController extends Component {
             return;
         }
 
+        if (this._isCounter2Delivery(counter) && !this._counter2WaypointPassed) {
+            this._goViaCounter2Waypoint(WaiterAIState.GoToCounter);
+            return;
+        }
+
         this._lastDeliveryWasCounter2 = this._isCounter2Delivery(counter);
-        counter.getWorldPosition(this._navTarget);
+        this._getCounterNavPosition(counter, this._navTarget);
         const move = BoundaryNavigator.moveToward(
             this.node,
             this._navTarget,
@@ -248,17 +257,27 @@ export class WaiterAIController extends Component {
 
     private _beginGoToCounter(): void {
         const counter = this._resolveCounter();
-        if (this._isCounter2Delivery(counter) && !this._isNearCounter2Waypoint()) {
-            this._goViaCounter2Waypoint(WaiterAIState.GoToCounter);
-            return;
+        if (this._isCounter2Delivery(counter)) {
+            this._counter2WaypointPassed = false;
+            if (!this._isNearCounter2Waypoint()) {
+                this._goViaCounter2Waypoint(WaiterAIState.GoToCounter);
+                return;
+            }
+            this._counter2WaypointPassed = true;
+        } else {
+            this._counter2WaypointPassed = false;
         }
         this._setState(WaiterAIState.GoToCounter);
     }
 
     private _leaveCounterFor(next: WaiterAIState): void {
-        if (this._lastDeliveryWasCounter2 && !this._isNearCounter2Waypoint()) {
-            this._goViaCounter2Waypoint(next);
-            return;
+        if (this._lastDeliveryWasCounter2) {
+            this._counter2WaypointPassed = false;
+            if (!this._isNearCounter2Waypoint()) {
+                this._goViaCounter2Waypoint(next);
+                return;
+            }
+            this._counter2WaypointPassed = true;
         }
         this._lastDeliveryWasCounter2 = false;
         this._setState(next);
@@ -278,21 +297,48 @@ export class WaiterAIController extends Component {
     }
 
     private _isCounter2Delivery(counter: Node | null): boolean {
-        const c2 = GameSceneRefs.counter2DeliveryNode;
-        if (!counter?.isValid || !c2?.isValid) {
+        if (!counter?.isValid) {
             return false;
         }
-        if (counter === c2) {
+        const c1 = GameSceneRefs.counterDeliveryNode;
+        if (c1?.isValid && this._isUnderCounterRoot(counter, c1)) {
+            return false;
+        }
+        const c2 = GameSceneRefs.counter2DeliveryNode;
+        if (c2?.isValid) {
+            return this._isUnderCounterRoot(counter, c2);
+        }
+        return /^ZuoZi-001$/i.test(counter.name) || this._hasNamedAncestor(counter, 'ZuoZi-001');
+    }
+
+    private _isUnderCounterRoot(node: Node, root: Node): boolean {
+        if (node === root) {
             return true;
         }
-        let node: Node | null = counter;
-        while (node) {
-            if (node === c2) {
+        let current: Node | null = node;
+        while (current) {
+            if (current === root) {
                 return true;
             }
-            node = node.parent;
+            current = current.parent;
         }
-        return counter.name === 'ZuoZi-001';
+        return false;
+    }
+
+    private _hasNamedAncestor(node: Node, name: string): boolean {
+        let current: Node | null = node;
+        while (current) {
+            if (current.name === name) {
+                return true;
+            }
+            current = current.parent;
+        }
+        return false;
+    }
+
+    private _getCounterNavPosition(counter: Node, out: Vec3): void {
+        const service = resolveCounterServiceNode(counter);
+        (service ?? counter).getWorldPosition(out);
     }
 
     private _getSceneJuiceCount(): number {
