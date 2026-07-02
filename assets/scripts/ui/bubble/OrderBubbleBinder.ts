@@ -3,8 +3,13 @@ import {
     Component,
     Vec3,
 } from 'cc';
+import { CurrencyType } from '../../currency/CurrencyType';
+import { PlayerJuiceTrayCarrier } from '../../juice/PlayerJuiceTrayCarrier';
 import { OrderManager } from '../../order/OrderManager';
-import { OrderStatus } from '../../order/OrderTypes';
+import { OrderSubjectType } from '../../order/OrderSubjectType';
+import { OrderInfo, OrderStatus } from '../../order/OrderTypes';
+import { GameSceneRefs } from '../../scene/GameSceneRefs';
+import { BUBBLE_BG_GREEN_PATH, BUBBLE_BG_PATH } from './BubbleIconPaths';
 import { SpeechBubbleManager } from './SpeechBubbleManager';
 
 const { ccclass, property } = _decorator;
@@ -22,15 +27,20 @@ export class OrderBubbleBinder extends Component {
     private readonly _onOrdersChanged = (): void => {
         this.refresh();
     };
+    private readonly _onJuiceTrayChanged = (): void => {
+        this.refresh();
+    };
 
     onLoad() {
         this._bubbleMgr = SpeechBubbleManager.ensure();
         OrderManager.ensure().onOrdersChanged(this._onOrdersChanged);
+        this._bindJuiceTrayListener();
         this.scheduleOnce(() => this.refresh(), 0);
     }
 
     onDestroy() {
         OrderManager.instance?.offOrdersChanged(this._onOrdersChanged);
+        GameSceneRefs.protagonist?.off('juice-tray-changed', this._onJuiceTrayChanged, this);
         this._bubbleMgr?.hideAll();
     }
 
@@ -54,6 +64,7 @@ export class OrderBubbleBinder extends Component {
                 order.subjectNode,
                 order.requirements,
                 this.localOffset,
+                this._resolveBubbleBgPath(order),
             );
             this._bubbleIds.set(order.subjectId, bubbleId);
         }
@@ -64,5 +75,28 @@ export class OrderBubbleBinder extends Component {
                 this._bubbleIds.delete(subjectId);
             }
         }
+    }
+
+    private _bindJuiceTrayListener(): void {
+        const protagonist = GameSceneRefs.protagonist;
+        if (!protagonist?.isValid) {
+            this.scheduleOnce(() => this._bindJuiceTrayListener(), 0.2);
+            return;
+        }
+        protagonist.on('juice-tray-changed', this._onJuiceTrayChanged, this);
+    }
+
+    private _resolveBubbleBgPath(order: OrderInfo): string {
+        if (order.subjectType !== OrderSubjectType.Customer) {
+            return BUBBLE_BG_PATH;
+        }
+        const juiceReq = order.requirements.find((r) => r.type === CurrencyType.PineappleJuice);
+        if (!juiceReq || juiceReq.amount <= 0) {
+            return BUBBLE_BG_PATH;
+        }
+        const carried = GameSceneRefs.protagonist
+            ?.getComponent(PlayerJuiceTrayCarrier)
+            ?.carriedJuiceCount ?? 0;
+        return carried >= juiceReq.amount ? BUBBLE_BG_GREEN_PATH : BUBBLE_BG_PATH;
     }
 }

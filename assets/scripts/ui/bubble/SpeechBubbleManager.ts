@@ -16,7 +16,7 @@ import {
 } from 'cc';
 import { CurrencyCost, CurrencyType } from '../../currency/CurrencyType';
 import { PlayAreaBoundary } from '../../scene/PlayAreaBoundary';
-import { BUBBLE_ICON_PATHS, SPEECH_BUBBLE_PREFAB_PATH } from './BubbleIconPaths';
+import { BUBBLE_BG_GREEN_PATH, BUBBLE_BG_PATH, BUBBLE_ICON_PATHS, SPEECH_BUBBLE_PREFAB_PATH } from './BubbleIconPaths';
 import { SpeechBubbleView } from './SpeechBubbleView';
 
 const { ccclass, property } = _decorator;
@@ -26,6 +26,7 @@ export interface BubbleShowOptions {
     target: Node;
     localOffset?: Vec3;
     items: CurrencyCost[];
+    bgPath?: string;
 }
 
 interface BubbleEntry {
@@ -35,6 +36,7 @@ interface BubbleEntry {
     root: Node;
     view: SpeechBubbleView;
     items: CurrencyCost[];
+    bgPath: string;
 }
 
 /**
@@ -151,9 +153,10 @@ export class SpeechBubbleManager extends Component {
         }
 
         const localOffset = options.localOffset ?? this.defaultLocalOffset;
+        const bgPath = options.bgPath ?? BUBBLE_BG_PATH;
         let entry = this._bubbles.get(id);
         if (!entry) {
-            const root = this._createBubbleNode(items);
+            const root = this._createBubbleNode(items, bgPath);
             if (!root) {
                 return id;
             }
@@ -165,13 +168,15 @@ export class SpeechBubbleManager extends Component {
                 root,
                 view,
                 items,
+                bgPath,
             };
             this._bubbles.set(id, entry);
         } else {
             entry.target = options.target;
             entry.localOffset = localOffset;
             entry.items = items;
-            entry.view.applyItems(items, (path) => this._getFrame(path));
+            entry.bgPath = bgPath;
+            this._applyEntryVisual(entry);
             entry.root.active = true;
         }
 
@@ -184,8 +189,9 @@ export class SpeechBubbleManager extends Component {
         target: Node,
         items: CurrencyCost[],
         localOffset?: Vec3,
+        bgPath?: string,
     ): string {
-        return this.show({ id, target, items, localOffset });
+        return this.show({ id, target, items, localOffset, bgPath });
     }
 
     public hide(id: string): void {
@@ -247,7 +253,7 @@ export class SpeechBubbleManager extends Component {
         });
     }
 
-    private _createBubbleNode(items: CurrencyCost[]): Node | null {
+    private _createBubbleNode(items: CurrencyCost[], bgPath: string): Node | null {
         if (!this.bubblePrefab) {
             return null;
         }
@@ -268,7 +274,13 @@ export class SpeechBubbleManager extends Component {
         }
         view.bindNodes();
         view.applyItems(items, (path) => this._getFrame(path));
+        view.applyBackground(this._getFrame(bgPath));
         return root;
+    }
+
+    private _applyEntryVisual(entry: BubbleEntry): void {
+        entry.view.applyItems(entry.items, (path) => this._getFrame(path));
+        entry.view.applyBackground(this._getFrame(entry.bgPath));
     }
 
     private _resolveWorldCamera(): Camera | null {
@@ -295,6 +307,9 @@ export class SpeechBubbleManager extends Component {
         for (const type of [CurrencyType.PineappleJuice, CurrencyType.GoldCoin]) {
             this._loadFrame(BUBBLE_ICON_PATHS[type], () => this._refreshAllBubbles());
         }
+        for (const path of [BUBBLE_BG_PATH, BUBBLE_BG_GREEN_PATH]) {
+            this._loadFrame(path, () => this._refreshAllBubbles());
+        }
     }
 
     private _loadFrame(path: string, onLoaded?: () => void): void {
@@ -315,7 +330,7 @@ export class SpeechBubbleManager extends Component {
 
     private _refreshAllBubbles(): void {
         for (const entry of this._bubbles.values()) {
-            entry.view.applyItems(entry.items, (path) => this._getFrame(path));
+            this._applyEntryVisual(entry);
         }
     }
 

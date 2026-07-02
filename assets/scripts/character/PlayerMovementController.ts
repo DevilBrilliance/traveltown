@@ -170,6 +170,9 @@ export class PlayerMovementController extends Component {
     };
 
     private _playLocomotionAnim(moving: boolean, force = false): void {
+        if (this.fruitCarrier?.isHarvesting) {
+            return;
+        }
         const carrierState = this.fruitCarrier?.getLocomotionAnimState(moving);
         const trayState = this.juiceTrayCarrier?.getLocomotionAnimState(moving);
         const state = carrierState ?? trayState ?? (moving ? CharacterAnimState.PlayerRun : CharacterAnimState.PlayerIdle);

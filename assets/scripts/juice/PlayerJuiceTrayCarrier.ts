@@ -49,10 +49,10 @@ export class PlayerJuiceTrayCarrier extends Component {
     maxCarryCount = 12;
 
     @property({ tooltip: '每取一杯间隔（秒）' })
-    transferInterval = 0.5;
+    transferInterval = 0.2;
 
     @property({ tooltip: '收银台每交付一杯间隔（秒）' })
-    deliverInterval = 0.5;
+    deliverInterval = 0.2;
 
     @property({ tooltip: '托盘挂点（玩家本地坐标，同后背菠萝挂法）' })
     trayLocalPos = new Vec3(0, 1.35, 0.75);
@@ -411,7 +411,11 @@ export class PlayerJuiceTrayCarrier extends Component {
             this._deliverTimer >= this.deliverInterval
             && this._carriedCount > 0
         ) {
-            const juiceReq = order.requirements.find((r) => r.type === CurrencyType.PineappleJuice);
+            const currentOrder = this._findDeliverableOrder();
+            if (!currentOrder) {
+                break;
+            }
+            const juiceReq = currentOrder.requirements.find((r) => r.type === CurrencyType.PineappleJuice);
             if (!juiceReq || juiceReq.amount <= 0) {
                 break;
             }
@@ -422,7 +426,7 @@ export class PlayerJuiceTrayCarrier extends Component {
             CurrencyWallet.ensure().add(CurrencyType.GoldCoin, this.coinPerGlass);
             AudioController.ensure().play(SoundEffect.CollectCoin);
 
-            const nextReqs = order.requirements
+            const nextReqs = currentOrder.requirements
                 .map((r) => (
                     r.type === CurrencyType.PineappleJuice
                         ? { type: r.type, amount: r.amount - 1 }
@@ -431,9 +435,9 @@ export class PlayerJuiceTrayCarrier extends Component {
                 .filter((r) => r.amount > 0);
 
             const manager = OrderManager.ensure();
-            manager.syncRequirements(order.subjectId, nextReqs);
+            manager.syncRequirements(currentOrder.subjectId, nextReqs);
             if (nextReqs.length === 0) {
-                manager.completeOrder(order.subjectId);
+                manager.completeOrder(currentOrder.subjectId);
             }
 
             this._deliverTimer -= this.deliverInterval;
@@ -579,19 +583,30 @@ export class PlayerJuiceTrayCarrier extends Component {
         if (!root?.isValid || root.children.length === 0) {
             return null;
         }
+        const glass = this._pickEarliestGlass(root.children);
+        if (!glass?.isValid) {
+            return null;
+        }
+        glass.setParent(null);
+        return glass;
+    }
+
+    /** 优先取索引最小（最早生成）的果汁杯 */
+    private _pickEarliestGlass(children: readonly Node[]): Node | null {
         let best: Node | null = null;
         let bestIdx = Infinity;
-        for (const child of root.children) {
+        for (const child of children) {
+            if (!child?.isValid) {
+                continue;
+            }
             const match = /^JuiceGlass_(\d+)$/.exec(child.name);
-            const idx = match ? parseInt(match[1], 10) : 0;
+            const idx = match ? parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
             if (idx < bestIdx) {
                 bestIdx = idx;
                 best = child;
             }
         }
-        const glass = best ?? root.children[0];
-        glass.setParent(null);
-        return glass;
+        return best ?? children[0] ?? null;
     }
 
     private _computeTrayGlassLocal(index: number, out: Vec3): void {

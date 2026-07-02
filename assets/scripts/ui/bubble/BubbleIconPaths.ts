@@ -6,8 +6,11 @@ export const BUBBLE_ICON_PATHS: Record<CurrencyType, string> = {
     [CurrencyType.GoldCoin]: 'textures/输出UI/55单人_00001',
 };
 
-/** 气泡背景（resources 路径） */
-export const BUBBLE_BG_PATH = 'textures/输出UI/长方形_白框';
+/** 气泡背景（未满足交付条件） */
+export const BUBBLE_BG_PATH = 'textures/输出UI/ui框/白';
+
+/** 可交付时气泡背景（resources 路径） */
+export const BUBBLE_BG_GREEN_PATH = 'textures/输出UI/ui框/绿';
 
 /** 订单气泡 UI 预制体（resources 路径，不含扩展名） */
 export const SPEECH_BUBBLE_PREFAB_PATH = 'prefabs/SpeechBubble';

@@ -6,7 +6,6 @@ import {
     Vec3,
 } from 'cc';
 import { AudioController } from '../audio/AudioController';
-import { SoundEffect } from '../audio/SoundEffect';
 import { AppearanceController } from '../character/AppearanceController';
 import { CharacterAnimController } from '../character/CharacterAnimController';
 import { CharacterAnimState } from '../character/CharacterAnimState';
@@ -189,7 +188,6 @@ export class WorkerFruitCarrier extends Component {
         this._spawnBackVisual(source);
         source.markCollected();
         this._carriedTypes.push(FruitType.Pineapple);
-        AudioController.ensure().play(SoundEffect.CollectPineapple);
         this._collectCooldown = this.collectInterval;
     }
 

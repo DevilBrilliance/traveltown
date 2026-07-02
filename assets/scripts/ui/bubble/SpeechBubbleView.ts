@@ -3,6 +3,7 @@ import {
     Component,
     instantiate,
     Node,
+    Sprite,
     SpriteFrame,
     UITransform,
 } from 'cc';
@@ -107,5 +108,16 @@ export class SpeechBubbleView extends Component {
         const bg = this.node.getChildByName('Bg');
         bg?.getComponent(UITransform)?.setContentSize(bgW, bgH);
         this.node.getComponent(UITransform)?.setContentSize(bgW, bgH);
+    }
+
+    public applyBackground(frame: SpriteFrame | null): void {
+        if (!frame) {
+            return;
+        }
+        const bg = this.node.getChildByName('Bg');
+        const sprite = bg?.getComponent(Sprite);
+        if (sprite) {
+            sprite.spriteFrame = frame;
+        }
     }
 }

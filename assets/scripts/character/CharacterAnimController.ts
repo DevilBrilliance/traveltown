@@ -93,7 +93,11 @@ export class CharacterAnimController extends Component {
     }
 
     /** 播放一次动画，结束后回调 */
-    public playOnce(state: CharacterAnimState, onFinished?: () => void): void {
+    public playOnce(
+        state: CharacterAnimState,
+        onFinished?: () => void,
+        playbackSpeed = 1,
+    ): void {
         this.unschedule(this._invokeOnceFinish);
         this._onceFinishCallback = onFinished ?? null;
 
@@ -109,7 +113,10 @@ export class CharacterAnimController extends Component {
                 return;
             }
             const animState = this._playClip(state, clip, AnimationClip.WrapMode.Normal);
-            const speed = Math.max(animState?.speed ?? 1, 0.01);
+            const speed = Math.max((animState?.speed ?? 1) * playbackSpeed, 0.01);
+            if (animState) {
+                animState.speed = speed;
+            }
             this.scheduleOnce(this._invokeOnceFinish, clip.duration / speed);
         });
     }

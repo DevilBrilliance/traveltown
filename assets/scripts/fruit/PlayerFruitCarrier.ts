@@ -60,7 +60,10 @@ export class PlayerFruitCarrier extends Component {
 
 
     @property({ tooltip: '两次采集间隔（秒）' })
-    collectInterval = 0.175;
+    collectInterval = 0.05;
+
+    @property({ tooltip: '菠萝收割动画播放倍速' })
+    pineappleHarvestAnimSpeed = 1.2;
 
 
 
@@ -536,11 +539,11 @@ export class PlayerFruitCarrier extends Component {
 
         }
 
-        anim.playOnce(CharacterAnimState.Harvest, () => {
-
-            this._finishPineappleHarvest();
-
-        });
+        anim.playOnce(
+            CharacterAnimState.Harvest,
+            () => this._finishPineappleHarvest(),
+            this.pineappleHarvestAnimSpeed,
+        );
 
     }
 

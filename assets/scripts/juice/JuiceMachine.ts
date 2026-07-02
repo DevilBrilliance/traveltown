@@ -145,8 +145,11 @@ export class JuiceMachine extends Component {
         let best: Node | null = null;
         let bestIdx = Infinity;
         for (const child of root.children) {
+            if (!child?.isValid) {
+                continue;
+            }
             const match = /^JuiceGlass_(\d+)$/.exec(child.name);
-            const idx = match ? parseInt(match[1], 10) : 0;
+            const idx = match ? parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
             if (idx < bestIdx) {
                 bestIdx = idx;
                 best = child;
