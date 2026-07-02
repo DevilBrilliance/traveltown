@@ -51,6 +51,7 @@ import { GuideManager } from '../guide/GuideManager';
 import { GuideConditionType } from '../guide/GuideTypes';
 import { FruitType } from '../fruit/FruitType';
 import { MechanismGate } from './MechanismGate';
+import { findDescendantByName } from '../juice/CounterDeliveryHelper';
 
 const { ccclass, property } = _decorator;
 
@@ -308,14 +309,54 @@ export class GameStart extends Component {
         }
         if (!this.counter2UnlockTarget?.isValid && this.counter2DeliveryNode?.isValid) {
             this.counter2UnlockTarget = this.counter2DeliveryNode.getChildByName('SYJ')
-                ?? this._findDescendantByName(this.counter2DeliveryNode, 'SYJ');
+                ?? findDescendantByName(this.counter2DeliveryNode, 'SYJ');
         }
         if (!this.gateDoor1?.isValid) {
-            this.gateDoor1 = this._findDescendantByName(island, 'Men');
+            this.gateDoor1 = findDescendantByName(island, 'Men');
         }
         if (!this.gateDoor2?.isValid) {
-            this.gateDoor2 = this._findDescendantByName(island, 'Men-001');
+            this.gateDoor2 = findDescendantByName(island, 'Men-001');
         }
+    }
+
+    /** 取离顾客最近的 ZuoZi，找不到则退回 fallback */
+    private _resolveCustomerDeliveryNode(customerPos: Vec3, fallback: Node | null): Node | null {
+        const island = this.island;
+        if (!island?.isValid) {
+            return fallback;
+        }
+        const zuozis = this._collectZuoZiNodes(island);
+        if (zuozis.length === 0) {
+            return fallback;
+        }
+        let best: Node = zuozis[0];
+        let bestDistSq = Number.POSITIVE_INFINITY;
+        for (const zuozi of zuozis) {
+            const wp = zuozi.worldPosition;
+            const dx = customerPos.x - wp.x;
+            const dz = customerPos.z - wp.z;
+            const distSq = dx * dx + dz * dz;
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                best = zuozi;
+            }
+        }
+        return best;
+    }
+
+    private _collectZuoZiNodes(root: Node): Node[] {
+        const result: Node[] = [];
+        const stack: Node[] = [root];
+        while (stack.length > 0) {
+            const node = stack.pop()!;
+            if (/^ZuoZi/i.test(node.name)) {
+                result.push(node);
+            }
+            for (const child of node.children) {
+                stack.push(child);
+            }
+        }
+        return result;
     }
 
     private _findDescendantByName(root: Node, name: string): Node | null {
@@ -467,20 +508,24 @@ export class GameStart extends Component {
         }
         spawner.npcPrefab = this.protagonistPrefab;
         spawner.lookAtTarget.set(0, 0, 0);
+        const customer0Pos = new Vec3(-12, 0, 3);
+        const customer1Pos = new Vec3(-12, 0, -3);
         spawner.spawnFromConfigs([
             {
-                position: new Vec3(-12, 0, 3),
+                position: customer0Pos,
                 appearance: CharacterAppearanceType.Customer0,
                 requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_0',
                 displayName: '顾客',
+                deliveryNode: this._resolveCustomerDeliveryNode(customer0Pos, this.counterDeliveryNode),
             },
             {
-                position: new Vec3(-12, 0, -3),
+                position: customer1Pos,
                 appearance: CharacterAppearanceType.Customer1,
                 requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_1',
                 displayName: '顾客',
+                deliveryNode: this._resolveCustomerDeliveryNode(customer1Pos, this.counterDeliveryNode),
             },
         ]);
     }
@@ -492,24 +537,28 @@ export class GameStart extends Component {
         }
         spawner.npcPrefab = this.protagonistPrefab;
         spawner.lookAtTarget.set(0, 0, 0);
+        const customer2Pos = new Vec3(10, 0, 22);
+        const customer3Pos = new Vec3(13, 0, 22);
         spawner.appendFromConfigs([
             {
-                position: new Vec3(10, 0, 22),
+                position: customer2Pos,
                 appearance: CharacterAppearanceType.Customer0,
                 requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_2',
                 displayName: '顾客',
                 showDuck: false,
                 idleAnim: CharacterAnimState.PlayerIdle,
+                deliveryNode: this._resolveCustomerDeliveryNode(customer2Pos, this.counter2DeliveryNode),
             },
             {
-                position: new Vec3(13, 0, 22),
+                position: customer3Pos,
                 appearance: CharacterAppearanceType.Customer1,
                 requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_3',
                 displayName: '顾客',
                 showDuck: false,
                 idleAnim: CharacterAnimState.PlayerIdle,
+                deliveryNode: this._resolveCustomerDeliveryNode(customer3Pos, this.counter2DeliveryNode),
             },
         ]);
     }

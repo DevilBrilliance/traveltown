@@ -16,7 +16,9 @@ import { CharacterAnimState } from '../character/CharacterAnimState';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { CurrencyType } from '../currency/CurrencyType';
 import { OrderManager } from '../order/OrderManager';
-import { findPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
+import {
+    findDeliverableCustomerJuiceOrder,
+} from '../order/CustomerOrderHelper';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { GuideManager } from '../guide/GuideManager';
 import { GuideConditionType } from '../guide/GuideTypes';
@@ -25,8 +27,6 @@ import { JUICE_TRAY_DB_PATH, JUICE_TRAY_PREFAB_UUID } from './JuiceMachinePaths'
 import { JuiceRackBounds } from './JuiceRackBounds';
 import {
     COUNTER_DELIVERY_RADIUS,
-    isActorNearAnyCounterDelivery,
-    resolveNearestCounterDelivery,
 } from './CounterDeliveryHelper';
 
 const { ccclass, property } = _decorator;
@@ -78,10 +78,7 @@ export class PlayerJuiceTrayCarrier extends Component {
     @property({ tooltip: '手持托盘 Z 方向行数（先 Z 后 X）' })
     trayRowsZ = 4;
 
-    @property({ type: Node, tooltip: '收银台交付点（ZuoZi），不填则自动查找' })
-    counterNode: Node | null = null;
-
-    @property({ tooltip: '收银台交付范围（世界单位，相对 ZuoZi）' })
+    @property({ tooltip: 'ZuoZi 交付范围外扩距离（世界单位）' })
     counterRadius = COUNTER_DELIVERY_RADIUS;
 
     @property({ tooltip: '每杯果汁交付获得金币' })
@@ -124,7 +121,7 @@ export class PlayerJuiceTrayCarrier extends Component {
         return this._isInsideRackPickupZone(rack);
     }
 
-    /** 当前是否在收银台交付范围内（供服务员 AI 判定） */
+    /** 当前是否在任一待交付顾客对应的 ZuoZi 范围内 */
     public isActorNearCounter(): boolean {
         return this._isNearCounter();
     }
@@ -139,9 +136,6 @@ export class PlayerJuiceTrayCarrier extends Component {
 
     /** 从 GameSceneRefs 同步场景引用（GameStart 绑定后调用） */
     public bindFromSceneRefs(): void {
-        if (GameSceneRefs.counterDeliveryNode?.isValid) {
-            this.counterNode = GameSceneRefs.counterDeliveryNode;
-        }
         if (GameSceneRefs.juiceOutputRack?.isValid) {
             this.juiceRack = GameSceneRefs.juiceOutputRack;
             this._rackAabbReady = false;
@@ -395,25 +389,18 @@ export class PlayerJuiceTrayCarrier extends Component {
         }
     }
 
-    private _resolveCounter(): Node | null {
-        if (this.counterNode?.isValid) {
-            return this.counterNode;
-        }
-        const pp = this.node.worldPosition;
-        return resolveNearestCounterDelivery(pp.x, pp.z);
-    }
-
     private _isNearCounter(): boolean {
         const pp = this.node.worldPosition;
-        return isActorNearAnyCounterDelivery(pp.x, pp.z, this.counterRadius);
+        return findDeliverableCustomerJuiceOrder(pp.x, pp.z, this.counterRadius) !== null;
     }
 
-    private _findPendingCustomerJuiceOrder() {
-        return findPendingCustomerJuiceOrder();
+    private _findDeliverableOrder() {
+        const pp = this.node.worldPosition;
+        return findDeliverableCustomerJuiceOrder(pp.x, pp.z, this.counterRadius);
     }
 
     private _handleCounterDelivery(dt: number): void {
-        const order = this._findPendingCustomerJuiceOrder();
+        const order = this._findDeliverableOrder();
         if (!order) {
             this._deliverTimer = 0;
             return;

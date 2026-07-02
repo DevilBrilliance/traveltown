@@ -64,8 +64,8 @@ export const DEFAULT_GUIDE_TASKS: GuideTaskConfig[] = [
         conditions: [{ type: GuideConditionType.DeliverJuice, amount: 1 }],
         nextTaskIds: ['guide_07_unlock_workers'],
         target: {
-            kind: GuideTargetKind.SceneRef,
-            sceneRefKey: 'counterDeliveryNode',
+            kind: GuideTargetKind.Dynamic,
+            dynamicKey: GuideDynamicTarget.PendingCustomerDelivery,
             worldOffset: new Vec3(0, 2.2, 0),
         },
     },

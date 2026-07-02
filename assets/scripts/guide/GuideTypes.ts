@@ -31,6 +31,7 @@ export enum GuideDynamicTarget {
     FirstMoney = 'first_money',
     FirstPineapple = 'first_pineapple',
     PineappleField = 'pineapple_field',
+    PendingCustomerDelivery = 'pending_customer_delivery',
 }
 
 /** GameSceneRefs 中可作为引导目标的键 */

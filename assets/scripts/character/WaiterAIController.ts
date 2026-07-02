@@ -4,11 +4,10 @@ import {
     Node,
     Vec3,
 } from 'cc';
-import { hasPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
+import { hasPendingCustomerJuiceOrder, resolvePendingOrderDeliveryNode } from '../order/CustomerOrderHelper';
 import { BoundaryNavigator } from '../navigation/BoundaryNavigator';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
-import { resolveNearestCounterDelivery } from '../juice/CounterDeliveryHelper';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 import { WaiterMovementController } from './WaiterMovementController';
@@ -223,12 +222,8 @@ export class WaiterAIController extends Component {
     }
 
     private _resolveCounter(): Node | null {
-        if (this._counterNode?.isValid) {
-            return this._counterNode;
-        }
-        const pos = this.node.worldPosition;
-        const counter = resolveNearestCounterDelivery(pos.x, pos.z);
-        if (counter) {
+        const counter = resolvePendingOrderDeliveryNode();
+        if (counter?.isValid) {
             this._counterNode = counter;
         }
         return counter;

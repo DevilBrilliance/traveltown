@@ -2,17 +2,17 @@ import { Node, Vec3 } from 'cc';
 import { JuiceRackBounds } from './JuiceRackBounds';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
 
-/** 默认交付范围（世界单位） */
+/** 默认交付范围（世界单位，相对 ZuoZi） */
 export const COUNTER_DELIVERY_RADIUS = 2;
 
 const _counterPos = new Vec3();
 
-/** 收银台果汁交付点（优先读 GameSceneRefs） */
+/** 收银台果汁交付点（ZuoZi，优先读 GameSceneRefs） */
 export function resolveCounterDeliveryNode(): Node | null {
     return GameSceneRefs.counterDeliveryNode;
 }
 
-/** 所有已解锁的收银台交付点 */
+/** 所有已解锁的收银台交付点（ZuoZi） */
 export function resolveCounterDeliveryNodes(): Node[] {
     const nodes: Node[] = [];
     const primary = GameSceneRefs.counterDeliveryNode;
@@ -26,7 +26,7 @@ export function resolveCounterDeliveryNodes(): Node[] {
     return nodes;
 }
 
-/** 角色是否在任一收银台交付范围内 */
+/** 角色是否在任一 ZuoZi 交付范围内 */
 export function isActorNearAnyCounterDelivery(
     actorX: number,
     actorZ: number,
@@ -41,7 +41,7 @@ export function isActorNearAnyCounterDelivery(
     return false;
 }
 
-/** 距角色最近的收银台交付点 */
+/** 距角色最近的 ZuoZi */
 export function resolveNearestCounterDelivery(actorX: number, actorZ: number): Node | null {
     const counters = resolveCounterDeliveryNodes();
     if (counters.length === 0) {
@@ -62,7 +62,7 @@ export function resolveNearestCounterDelivery(actorX: number, actorZ: number): N
     return best;
 }
 
-/** 角色是否在收银台交付范围内 */
+/** 角色是否在指定 ZuoZi 交付范围内 */
 export function isActorNearCounterDelivery(
     actorX: number,
     actorZ: number,
@@ -70,4 +70,17 @@ export function isActorNearCounterDelivery(
     radius = COUNTER_DELIVERY_RADIUS,
 ): boolean {
     return JuiceRackBounds.isPointNearNode(counter, actorX, actorZ, radius, true);
+}
+
+export function findDescendantByName(root: Node, name: string): Node | null {
+    if (root.name === name) {
+        return root;
+    }
+    for (const child of root.children) {
+        const found = findDescendantByName(child, name);
+        if (found) {
+            return found;
+        }
+    }
+    return null;
 }

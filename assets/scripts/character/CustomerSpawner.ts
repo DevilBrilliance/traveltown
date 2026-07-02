@@ -10,6 +10,7 @@ import {
 } from 'cc';
 import { CurrencyCost } from '../currency/CurrencyType';
 import { OrderManager } from '../order/OrderManager';
+import { registerCustomerDeliveryNode } from '../order/CustomerOrderHelper';
 import { OrderRequirementItem } from '../order/OrderRequirement';
 import { OrderSubject } from '../order/OrderSubject';
 import { OrderSubjectType } from '../order/OrderSubjectType';
@@ -32,6 +33,8 @@ export interface CustomerSpawnConfig {
     requirements: CurrencyCost[];
     subjectId?: string;
     displayName?: string;
+    /** 该顾客对应的 ZuoZi 交付点 */
+    deliveryNode?: Node | null;
     /** 是否显示鸭子，不填则用 Spawner 默认值 */
     showDuck?: boolean;
     /** 待机动作，不填则用顾客待机 */
@@ -201,6 +204,9 @@ export class CustomerSpawner extends Component {
             return item;
         });
         OrderManager.ensure().registerSubject(subject);
+        if (config.deliveryNode?.isValid) {
+            registerCustomerDeliveryNode(subject.getSubjectId(), config.deliveryNode);
+        }
     }
 
     private _resolveParent(): Node {
