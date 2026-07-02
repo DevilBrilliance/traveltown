@@ -25,8 +25,8 @@ import { JUICE_TRAY_DB_PATH, JUICE_TRAY_PREFAB_UUID } from './JuiceMachinePaths'
 import { JuiceRackBounds } from './JuiceRackBounds';
 import {
     COUNTER_DELIVERY_RADIUS,
-    isActorNearCounterDelivery,
-    resolveCounterDeliveryNode,
+    isActorNearAnyCounterDelivery,
+    resolveNearestCounterDelivery,
 } from './CounterDeliveryHelper';
 
 const { ccclass, property } = _decorator;
@@ -399,21 +399,13 @@ export class PlayerJuiceTrayCarrier extends Component {
         if (this.counterNode?.isValid) {
             return this.counterNode;
         }
-        const zuozi = resolveCounterDeliveryNode();
-        if (zuozi) {
-            this.counterNode = zuozi;
-            return zuozi;
-        }
-        return null;
+        const pp = this.node.worldPosition;
+        return resolveNearestCounterDelivery(pp.x, pp.z);
     }
 
     private _isNearCounter(): boolean {
-        const counter = this._resolveCounter();
-        if (!counter?.isValid) {
-            return false;
-        }
         const pp = this.node.worldPosition;
-        return isActorNearCounterDelivery(pp.x, pp.z, counter, this.counterRadius);
+        return isActorNearAnyCounterDelivery(pp.x, pp.z, this.counterRadius);
     }
 
     private _findPendingCustomerJuiceOrder() {

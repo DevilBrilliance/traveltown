@@ -110,18 +110,28 @@ export class CustomerSpawner extends Component {
     /** 按固定点位生成顾客并绑定订单（显示头顶气泡） */
     public spawnFromConfigs(configs: CustomerSpawnConfig[]): void {
         this.clearCustomers();
+        this._spawnConfigsInternal(configs);
+    }
+
+    /** 追加生成顾客（不清理已有顾客） */
+    public appendFromConfigs(configs: CustomerSpawnConfig[]): void {
+        this._spawnConfigsInternal(configs);
+    }
+
+    private _spawnConfigsInternal(configs: CustomerSpawnConfig[]): void {
         if (configs.length === 0) {
             return;
         }
 
         const parent = this._resolveParent();
         let pending = configs.length;
+        const baseIndex = this._customers.length;
 
         for (let i = 0; i < configs.length; i += 1) {
             const config = configs[i];
             const appearance = config.appearance ?? pickRandomCustomerAppearance();
             const pos = config.position.clone();
-            const index = i;
+            const index = baseIndex + i;
 
             AppearanceController.create(
                 parent,

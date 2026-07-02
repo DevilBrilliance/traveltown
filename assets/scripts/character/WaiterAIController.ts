@@ -8,7 +8,7 @@ import { hasPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
 import { BoundaryNavigator } from '../navigation/BoundaryNavigator';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
-import { resolveCounterDeliveryNode } from '../juice/CounterDeliveryHelper';
+import { resolveNearestCounterDelivery } from '../juice/CounterDeliveryHelper';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
 import { PlayAreaBoundary } from '../scene/PlayAreaBoundary';
 import { WaiterMovementController } from './WaiterMovementController';
@@ -226,12 +226,12 @@ export class WaiterAIController extends Component {
         if (this._counterNode?.isValid) {
             return this._counterNode;
         }
-        const zuozi = resolveCounterDeliveryNode();
-        if (zuozi) {
-            this._counterNode = zuozi;
-            return zuozi;
+        const pos = this.node.worldPosition;
+        const counter = resolveNearestCounterDelivery(pos.x, pos.z);
+        if (counter) {
+            this._counterNode = counter;
         }
-        return null;
+        return counter;
     }
 
     private _setState(state: WaiterAIState): void {

@@ -41,6 +41,8 @@ export type GuideSceneRefKey =
     | 'counterDeliveryNode'
     | 'workerPurchaseZone'
     | 'cashierPurchaseZone'
+    | 'counter2PurchaseZone'
+    | 'landExpansionPurchaseZone'
     | 'pineappleField';
 
 /** 单条完成条件 */

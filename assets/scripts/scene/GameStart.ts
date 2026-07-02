@@ -26,6 +26,8 @@ import { MoneyPickupSpawner } from '../pickup/MoneyPickupSpawner';
 import { PurchaseZone } from '../purchase/PurchaseZone';
 import { ensurePurchaseZone } from '../purchase/PurchaseZoneSetup';
 import {
+    PURCHASE_LAND_EXPANSION_ICON_PATH,
+    PURCHASE_REWARD_ICON_PATH,
     PURCHASE_WAITER_REWARD_ICON_PATH,
     PURCHASE_WORKER_REWARD_ICON_PATH,
 } from '../purchase/PurchaseZonePaths';
@@ -94,13 +96,31 @@ export class GameStart extends Component {
     @property({ tooltip: '服务员解锁后生成位置（收银台旁）' })
     cashierSpawnPosition = new Vec3(-3, 0, 5);
 
+    @property({ type: Node, tooltip: '收银台二解锁目标（SYJ）' })
+    counter2UnlockTarget: Node | null = null;
+
+    @property({ type: Node, tooltip: '收银台二果汁交付点 ZuoZi-001' })
+    counter2DeliveryNode: Node | null = null;
+
+    @property({ type: Node, tooltip: '橘子田根节点 juzi' })
+    juziField: Node | null = null;
+
+    @property({ tooltip: '收银台二解锁购买区世界坐标' })
+    counter2PurchasePosition = new Vec3(34, 0, 2);
+
+    @property({ tooltip: '扩地购买区世界坐标' })
+    landExpansionPosition = new Vec3(27, 0, 6.5);
+
     @property({ tooltip: '榨汁机投料区世界坐标（Y 会按底板顶面自动抬高）' })
     juiceMachinePosition = new Vec3(26, 0, -10);
 
     private _protagonist: Node | null = null;
     private _customersSpawned = false;
+    private _counter2CustomersSpawned = false;
     private _workerPurchaseZone: PurchaseZone | null = null;
     private _cashierPurchaseZone: PurchaseZone | null = null;
+    private _counter2PurchaseZone: PurchaseZone | null = null;
+    private _landExpansionZone: PurchaseZone | null = null;
     private _juiceMachine: JuiceMachine | null = null;
 
     onLoad() {
@@ -114,6 +134,8 @@ export class GameStart extends Component {
         this._ensureSpeechBubbleSystem();
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
+        this._resolveLateGameSceneNodes();
+        this._hideJuziChildren();
         this._ensureFruitCollectFields();
         GuideManager.ensure();
         this.scheduleOnce(() => this._bindUnlockChain(), 0);
@@ -128,6 +150,9 @@ export class GameStart extends Component {
         }
         this.counterPurchaseZone?.off('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
         this._workerPurchaseZone?.node.off('purchase-zone-ui-closed', this._onWorkerUnlocked, this);
+        this._cashierPurchaseZone?.node.off('purchase-zone-ui-closed', this._onWaiterUnlocked, this);
+        this._counter2PurchaseZone?.node.off('purchase-zone-ui-closed', this._onCounter2Unlocked, this);
+        this._landExpansionZone?.node.off('purchase-zone-ui-closed', this._onLandExpansionUnlocked, this);
     }
 
     /** 开始游戏并创建主角 */
@@ -167,6 +192,7 @@ export class GameStart extends Component {
         }
 
         this._setupWorkerAndCashierZones(island);
+        this._setupLateGameZones(island);
         this._juiceMachine = JuiceMachineSetup.ensureOnIsland(
             island,
             this.juiceMachinePosition,
@@ -218,17 +244,100 @@ export class GameStart extends Component {
                 workerSpawnPosition: this.cashierSpawnPosition,
             },
         );
+        this._cashierPurchaseZone.node.on('purchase-zone-ui-closed', this._onWaiterUnlocked, this);
 
         if (this._workerPurchaseZone.isPurchased) {
             this._onWorkerUnlocked();
+        }
+        if (this._cashierPurchaseZone.isPurchased) {
+            this._onWaiterUnlocked();
         }
 
         this._publishGuideSceneRefs();
     }
 
+    private _setupLateGameZones(island: Node): void {
+        this._counter2PurchaseZone = ensurePurchaseZone(
+            island,
+            'Counter2PurchaseZone',
+            this.counter2PurchasePosition,
+            {
+                costAmount: 100,
+                displayName: '收银台二',
+                orderSubjectId: 'Unlock_Counter2',
+                rewardIconPath: PURCHASE_REWARD_ICON_PATH,
+                unlockTarget: this.counter2UnlockTarget,
+            },
+        );
+        this._counter2PurchaseZone.node.on('purchase-zone-ui-closed', this._onCounter2Unlocked, this);
+
+        this._landExpansionZone = ensurePurchaseZone(
+            island,
+            'LandExpansionPurchaseZone',
+            this.landExpansionPosition,
+            {
+                costAmount: 200,
+                displayName: '扩地',
+                orderSubjectId: 'Unlock_LandExpansion',
+                rewardIconPath: PURCHASE_LAND_EXPANSION_ICON_PATH,
+            },
+        );
+        this._landExpansionZone.node.on('purchase-zone-ui-closed', this._onLandExpansionUnlocked, this);
+
+        if (this._counter2PurchaseZone.isPurchased) {
+            this._onCounter2Unlocked();
+        }
+        if (this._landExpansionZone.isPurchased) {
+            this._onLandExpansionUnlocked();
+        }
+    }
+
+    private _resolveLateGameSceneNodes(): void {
+        const island = this.island;
+        if (!island) {
+            return;
+        }
+        if (!this.juziField?.isValid) {
+            this.juziField = island.getChildByName('juzi');
+        }
+        if (!this.counter2DeliveryNode?.isValid) {
+            this.counter2DeliveryNode = this._findDescendantByName(island, 'ZuoZi-001');
+        }
+        if (!this.counter2UnlockTarget?.isValid && this.counter2DeliveryNode?.isValid) {
+            this.counter2UnlockTarget = this.counter2DeliveryNode.getChildByName('SYJ')
+                ?? this._findDescendantByName(this.counter2DeliveryNode, 'SYJ');
+        }
+    }
+
+    private _findDescendantByName(root: Node, name: string): Node | null {
+        if (root.name === name) {
+            return root;
+        }
+        for (const child of root.children) {
+            const found = this._findDescendantByName(child, name);
+            if (found) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private _hideJuziChildren(): void {
+        const juzi = this.juziField;
+        if (!juzi?.isValid) {
+            return;
+        }
+        for (const child of juzi.children) {
+            child.active = false;
+        }
+    }
+
     private _publishGuideSceneRefs(): void {
         GameSceneRefs.workerPurchaseZone = this._workerPurchaseZone?.node ?? null;
         GameSceneRefs.cashierPurchaseZone = this._cashierPurchaseZone?.node ?? null;
+        GameSceneRefs.counter2PurchaseZone = this._counter2PurchaseZone?.node ?? null;
+        GameSceneRefs.landExpansionPurchaseZone = this._landExpansionZone?.node ?? null;
+        GameSceneRefs.juziField = this.juziField;
         if (this.island?.isValid) {
             GameSceneRefs.pineappleField = this.island.getChildByName('pineapple');
         }
@@ -247,6 +356,36 @@ export class GameStart extends Component {
 
     private _onWorkerUnlocked(): void {
         this._cashierPurchaseZone?.activate();
+    }
+
+    private _onWaiterUnlocked(): void {
+        this._counter2PurchaseZone?.activate();
+    }
+
+    private _onCounter2Unlocked(): void {
+        GameSceneRefs.counter2DeliveryNode = this.counter2DeliveryNode;
+        if (!this._counter2CustomersSpawned) {
+            this._counter2CustomersSpawned = true;
+            this._spawnCounter2Customers();
+        }
+        this._landExpansionZone?.activate();
+        this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindFromSceneRefs();
+    }
+
+    private _onLandExpansionUnlocked(): void {
+        this._showJuziField();
+    }
+
+    private _showJuziField(): void {
+        const juzi = this.juziField;
+        if (!juzi?.isValid) {
+            return;
+        }
+        for (const child of juzi.children) {
+            child.active = true;
+        }
+        juzi.getComponent(FruitCollectFieldSetup)?.apply();
+        GameSceneRefs.juziField = juzi;
     }
 
     private _spawnCustomers(): void {
@@ -269,6 +408,31 @@ export class GameStart extends Component {
                 appearance: CharacterAppearanceType.Customer1,
                 requirements: [rollCustomerJuiceRequirement()],
                 subjectId: 'Customer_1',
+                displayName: '顾客',
+            },
+        ]);
+    }
+
+    private _spawnCounter2Customers(): void {
+        let spawner = this.node.getComponent(CustomerSpawner);
+        if (!spawner) {
+            spawner = this.node.addComponent(CustomerSpawner);
+        }
+        spawner.npcPrefab = this.protagonistPrefab;
+        spawner.lookAtTarget.set(0, 0, 0);
+        spawner.appendFromConfigs([
+            {
+                position: new Vec3(10, 0, 22),
+                appearance: CharacterAppearanceType.Customer0,
+                requirements: [rollCustomerJuiceRequirement()],
+                subjectId: 'Customer_2',
+                displayName: '顾客',
+            },
+            {
+                position: new Vec3(13, 0, 22),
+                appearance: CharacterAppearanceType.Customer1,
+                requirements: [rollCustomerJuiceRequirement()],
+                subjectId: 'Customer_3',
                 displayName: '顾客',
             },
         ]);
@@ -321,6 +485,7 @@ export class GameStart extends Component {
         GameSceneRefs.juiceOutputRack = this.juiceOutputRack;
         GameSceneRefs.juiceMachineRig = this.juiceMachineRig;
         GameSceneRefs.counterPurchaseZone = this.counterPurchaseZone;
+        GameSceneRefs.juziField = this.juziField;
         GameSceneRefs.juiceMachine = this._juiceMachine;
         GameSceneRefs.protagonist = this._protagonist;
         this._publishGuideSceneRefs();

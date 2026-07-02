@@ -16,6 +16,9 @@ export const PURCHASE_WORKER_REWARD_ICON_PATH = 'textures/输出UI/23角色_0000
 /** 解锁服务员 icon（单人） */
 export const PURCHASE_WAITER_REWARD_ICON_PATH = 'textures/输出UI/3单人_00001';
 
+/** 扩地 icon */
+export const PURCHASE_LAND_EXPANSION_ICON_PATH = 'textures/输出UI/2箭头_00001';
+
 /** 购买完成后底板切换为蓝框 */
 export const PURCHASE_ZONE_BG_COMPLETE_PATH = 'textures/输出UI/正方形_蓝框';
 

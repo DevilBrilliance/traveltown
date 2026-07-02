@@ -225,6 +225,10 @@ export class GuideManager extends Component {
                 return GameSceneRefs.workerPurchaseZone;
             case 'cashierPurchaseZone':
                 return GameSceneRefs.cashierPurchaseZone;
+            case 'counter2PurchaseZone':
+                return GameSceneRefs.counter2PurchaseZone;
+            case 'landExpansionPurchaseZone':
+                return GameSceneRefs.landExpansionPurchaseZone;
             case 'pineappleField':
                 return GameSceneRefs.pineappleField;
             case 'juiceMachineZone':
