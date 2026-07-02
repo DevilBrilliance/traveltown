@@ -17,6 +17,12 @@ function isUnderExcludedNode(node: Node): boolean {
         if (FENCE_NODE_NAME.test(name)) {
             return true;
         }
+        if (name.endsWith('PurchaseZone')
+            || name === 'PurchasePad'
+            || name === 'PurchaseZoneView'
+            || name === 'PanelRoot') {
+            return true;
+        }
         if (name === 'Protagonist' || name === 'Customers' || name === 'MoneyPickups') {
             return true;
         }

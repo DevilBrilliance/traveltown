@@ -30,15 +30,13 @@ class GameSceneRefsImpl {
 
     public cashierPurchaseZone: Node | null = null;
 
+    public landExpansionPurchaseZone: Node | null = null;
+
     /** 菠萝田根节点 */
     public pineappleField: Node | null = null;
 
     /** 收银台二果汁交付点（ZuoZi-001） */
     public counter2DeliveryNode: Node | null = null;
-
-    public counter2PurchaseZone: Node | null = null;
-
-    public landExpansionPurchaseZone: Node | null = null;
 
     /** 橘子田根节点 */
     public juziField: Node | null = null;

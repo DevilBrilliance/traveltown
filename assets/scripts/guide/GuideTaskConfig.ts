@@ -6,7 +6,7 @@ import {
     GuideTaskConfig,
 } from './GuideTypes';
 
-/** 默认新手引导链（10 步） */
+/** 默认新手引导链（9 步） */
 export const DEFAULT_GUIDE_TASKS: GuideTaskConfig[] = [
     {
         id: 'guide_01_collect_money',
@@ -82,7 +82,7 @@ export const DEFAULT_GUIDE_TASKS: GuideTaskConfig[] = [
     {
         id: 'guide_08_unlock_waiter',
         conditions: [{ type: GuideConditionType.UnlockPurchaseZone, subjectId: 'Unlock_Cashier' }],
-        nextTaskIds: ['guide_09_unlock_counter2'],
+        nextTaskIds: ['guide_09_unlock_land'],
         target: {
             kind: GuideTargetKind.SceneRef,
             sceneRefKey: 'cashierPurchaseZone',
@@ -90,17 +90,7 @@ export const DEFAULT_GUIDE_TASKS: GuideTaskConfig[] = [
         },
     },
     {
-        id: 'guide_09_unlock_counter2',
-        conditions: [{ type: GuideConditionType.UnlockPurchaseZone, subjectId: 'Unlock_Counter2' }],
-        nextTaskIds: ['guide_10_unlock_land'],
-        target: {
-            kind: GuideTargetKind.SceneRef,
-            sceneRefKey: 'counter2PurchaseZone',
-            worldOffset: new Vec3(0, 2.2, 0),
-        },
-    },
-    {
-        id: 'guide_10_unlock_land',
+        id: 'guide_09_unlock_land',
         conditions: [{ type: GuideConditionType.UnlockPurchaseZone, subjectId: 'Unlock_LandExpansion' }],
         nextTaskIds: [],
         target: {

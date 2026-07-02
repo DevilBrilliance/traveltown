@@ -163,24 +163,52 @@ export class PurchaseZone extends Component {
             return;
         }
         this.resnapWorldPosition();
-        if (this.node.active) {
-            return;
+        if (!this.node.active) {
+            this.node.active = true;
         }
-        this.node.active = true;
+        this._scheduleResnapRetries();
+    }
+
+    /** 写入世界锚点并立即贴地 */
+    public applyWorldAnchor(worldPosition: Vec3, island?: Node | null): void {
+        this.anchorWorldPosition.set(worldPosition);
+        this._resnapToIsland(island);
     }
 
     /** 按锚点 XZ 重新贴地（与榨汁机投料区相同逻辑） */
     public resnapWorldPosition(): void {
-        if (this.anchorWorldPosition.lengthSqr() < 1e-6) {
-            return;
-        }
-        const island = GameSceneRefs.island;
+        this._resnapToIsland();
+    }
+
+    private _resnapToIsland(island?: Node | null): void {
+        const islandNode = island ?? this.node.parent ?? GameSceneRefs.island;
+        const anchor = this._resolveAnchorWorldPosition();
         const snapped = IslandSurfaceSampler.snapWorldPositionToSurface(
-            this.anchorWorldPosition.clone(),
-            island,
+            anchor,
+            islandNode,
             0,
         );
         this.node.setWorldPosition(snapped);
+    }
+
+    private _resolveAnchorWorldPosition(): Vec3 {
+        if (this.anchorWorldPosition.lengthSqr() >= 1e-6) {
+            return this.anchorWorldPosition.clone();
+        }
+        const wp = this.node.worldPosition;
+        return new Vec3(wp.x, 0, wp.z);
+    }
+
+    private _scheduleResnapRetries(): void {
+        const delays = [0.15, 0.35, 0.7];
+        for (const delay of delays) {
+            this.scheduleOnce(() => {
+                if (!this.isValid || this._completed) {
+                    return;
+                }
+                this.resnapWorldPosition();
+            }, delay);
+        }
     }
 
     // ─── private ─────────────────────────────────────────────────────────
@@ -348,6 +376,8 @@ export class PurchaseZone extends Component {
 
         this._view = view;
         this._refreshUI();
+        this.resnapWorldPosition();
+        this._scheduleResnapRetries();
     }
 
     private _isPlayerInRange(player: Node): boolean {

@@ -50305,12 +50305,6 @@
       "__id__": 1635
     },
     "juziField": null,
-    "counter2PurchasePosition": {
-      "__type__": "cc.Vec3",
-      "x": 34,
-      "y": 0,
-      "z": 2
-    },
     "landExpansionPosition": {
       "__type__": "cc.Vec3",
       "x": 27,

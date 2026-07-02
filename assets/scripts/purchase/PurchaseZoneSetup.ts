@@ -17,6 +17,18 @@ export interface PurchaseZoneConfig {
     unlockTarget?: Node | null;
 }
 
+function schedulePurchaseZoneResnaps(zone: PurchaseZone, island: Node, anchor: Vec3): void {
+    const delays = [0.2, 0.5, 1.0];
+    for (const delay of delays) {
+        zone.scheduleOnce(() => {
+            if (!zone.isValid) {
+                return;
+            }
+            zone.applyWorldAnchor(anchor, island);
+        }, delay);
+    }
+}
+
 /**
  * 在 Island 下创建/配置购买区节点（默认 inactive，需调用 activate() 显示）。
  */
@@ -26,19 +38,12 @@ export function ensurePurchaseZone(
     worldPosition: Vec3,
     config: PurchaseZoneConfig,
 ): PurchaseZone {
+    const anchor = worldPosition.clone();
+
     let node = parent.getChildByName(name);
     if (!node) {
         node = new Node(name);
         node.setParent(parent);
-    }
-    const snapped = IslandSurfaceSampler.snapWorldPositionToSurface(
-        worldPosition.clone(),
-        parent,
-        0,
-    );
-    node.setWorldPosition(snapped);
-    if (node.active) {
-        node.active = false;
     }
 
     const zone = node.getComponent(PurchaseZone) ?? node.addComponent(PurchaseZone);
@@ -62,18 +67,12 @@ export function ensurePurchaseZone(
         zone.workerSpawnPosition = config.workerSpawnPosition.clone();
     }
     zone.unlockTarget = config.unlockTarget ?? null;
-    zone.anchorWorldPosition = worldPosition.clone();
-    zone.resnapWorldPosition();
+    zone.applyWorldAnchor(anchor, parent);
     if (!zone.isPurchased) {
         node.active = false;
     }
 
-    zone.scheduleOnce(() => {
-        if (!node.isValid) {
-            return;
-        }
-        zone.resnapWorldPosition();
-    }, 0.2);
+    schedulePurchaseZoneResnaps(zone, parent, anchor);
 
     return zone;
 }
