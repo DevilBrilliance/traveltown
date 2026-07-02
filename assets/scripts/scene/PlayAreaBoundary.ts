@@ -17,6 +17,8 @@ const { ccclass, property } = _decorator;
 const DEFAULT_FENCE_ROOT_NAMES = ['zhalan'] as const;
 /** 匹配栅栏节点名，但排除地板（DiBan） */
 const FENCE_NODE_NAME = /^(zhalan|ZhaLan)(?!.*DiBan)/i;
+/** 机关门（单独注册碰撞，不参与栅栏扫描） */
+const GATE_DOOR_NODE_NAMES = new Set(['Men', 'Men-001']);
 
 interface FenceAabb {
     center: Vec3;
@@ -67,6 +69,7 @@ export class PlayAreaBoundary extends Component {
     private readonly _corner = new Vec3();
     private readonly _worldCorner = new Vec3();
     private readonly _fenceAabbs: FenceAabb[] = [];
+    private readonly _manualFenceAabbs: FenceAabb[] = [];
     private readonly _sceneOccluderAabbs: SceneOccluderAabb[] = [];
     private _ready = false;
     private _rebuildAttempts = 0;
@@ -143,6 +146,9 @@ export class PlayAreaBoundary extends Component {
             for (const box of this._fenceAabbs) {
                 this._resolveCircleAabbXZ(pos, r, box);
             }
+            for (const box of this._manualFenceAabbs) {
+                this._resolveCircleAabbXZ(pos, r, box);
+            }
         }
     }
 
@@ -177,6 +183,11 @@ export class PlayAreaBoundary extends Component {
         const checkDist = Math.max(0, maxDist - margin);
 
         for (const box of this._fenceAabbs) {
+            if (PlayAreaBoundary._rayIntersectsAabb(from, dir, box, checkDist)) {
+                return true;
+            }
+        }
+        for (const box of this._manualFenceAabbs) {
             if (PlayAreaBoundary._rayIntersectsAabb(from, dir, box, checkDist)) {
                 return true;
             }
@@ -249,6 +260,37 @@ export class PlayAreaBoundary extends Component {
             }
             this._pushFenceAabb(this._tmpAabb);
         }
+    }
+
+    /** 机关门关闭态 AABB（与 zhalan 无关，注册时快照一次） */
+    public setManualFenceNodes(nodes: readonly (Node | null)[]): void {
+        this._manualFenceAabbs.length = 0;
+        for (const node of nodes) {
+            if (!node?.isValid) {
+                continue;
+            }
+            if (!JuiceRackBounds.readNodeWorldAabb(node, this._tmpAabb, true)) {
+                continue;
+            }
+            this._manualFenceAabbs.push(this._cloneFenceAabb(this._tmpAabb));
+        }
+    }
+
+    /** 开门后移除机关门碰撞（不触碰 zhalan） */
+    public clearManualFenceAabbs(): void {
+        this._manualFenceAabbs.length = 0;
+    }
+
+    private _cloneFenceAabb(aabb: geometry.AABB): FenceAabb {
+        const pad = this.fencePadding;
+        return {
+            center: aabb.center.clone(),
+            halfExtents: new Vec3(
+                aabb.halfExtents.x + pad,
+                aabb.halfExtents.y + pad,
+                aabb.halfExtents.z + pad,
+            ),
+        };
     }
 
     private _pushFenceAabb(aabb: geometry.AABB): void {
@@ -346,6 +388,10 @@ export class PlayAreaBoundary extends Component {
     }
 
     private _collectZhaLanRenderers(root: Node, seen: Set<MeshRenderer>): void {
+        if (PlayAreaBoundary._isGateDoorNode(root)) {
+            return;
+        }
+
         if (FENCE_NODE_NAME.test(root.name)) {
             const renderer = root.getComponent(MeshRenderer);
             if (renderer) {
@@ -357,8 +403,22 @@ export class PlayAreaBoundary extends Component {
         }
 
         for (const child of root.children) {
+            if (PlayAreaBoundary._isGateDoorNode(child)) {
+                continue;
+            }
             this._collectZhaLanRenderers(child, seen);
         }
+    }
+
+    private static _isGateDoorNode(node: Node): boolean {
+        let current: Node | null = node;
+        while (current) {
+            if (GATE_DOOR_NODE_NAMES.has(current.name)) {
+                return true;
+            }
+            current = current.parent;
+        }
+        return false;
     }
 
     private _resolveCircleAabbXZ(pos: Vec3, radius: number, box: FenceAabb): void {

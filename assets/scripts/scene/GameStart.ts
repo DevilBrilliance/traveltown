@@ -50,6 +50,7 @@ import { GameSceneRefs } from './GameSceneRefs';
 import { GuideManager } from '../guide/GuideManager';
 import { GuideConditionType } from '../guide/GuideTypes';
 import { FruitType } from '../fruit/FruitType';
+import { MechanismGate } from './MechanismGate';
 
 const { ccclass, property } = _decorator;
 
@@ -110,12 +111,25 @@ export class GameStart extends Component {
     @property({ tooltip: '扩地购买区世界坐标' })
     landExpansionPosition = LAND_EXPANSION_PURCHASE_POSITION.clone();
 
+    @property({ type: Node, tooltip: '机关门扇 1（解锁收银台后打开）' })
+    gateDoor1: Node | null = null;
+
+    @property({ type: Node, tooltip: '机关门扇 2（解锁收银台后打开）' })
+    gateDoor2: Node | null = null;
+
+    @property({ tooltip: '门1 打开时绕本地 Y 轴旋转（如 -90）' })
+    gateDoor1WorldDeltaY = -90;
+
+    @property({ tooltip: '门2 打开角度；与门1相同时，反向朝向的门会自动取反以对称外开' })
+    gateDoor2WorldDeltaY = -90;
+
     @property({ tooltip: '榨汁机投料区世界坐标（Y 会按底板顶面自动抬高）' })
     juiceMachinePosition = new Vec3(26, 0, -10);
 
     private _protagonist: Node | null = null;
     private _customersSpawned = false;
     private _counter2CustomersSpawned = false;
+    private _gateOpened = false;
     private _workerPurchaseZone: PurchaseZone | null = null;
     private _cashierPurchaseZone: PurchaseZone | null = null;
     private _landExpansionZone: PurchaseZone | null = null;
@@ -202,9 +216,16 @@ export class GameStart extends Component {
 
         this.counterPurchaseZone?.on('purchase-zone-ui-closed', this._onCashRegisterUnlocked, this);
 
+        this._resolveLateGameSceneNodes();
+
         const counterPurchase = this.counterPurchaseZone?.getComponent(PurchaseZone);
+        if (!counterPurchase?.isPurchased) {
+            this._registerGateFenceAabbs();
+        }
+
         if (counterPurchase?.isPurchased) {
             this._onCashRegisterUnlocked();
+            this._snapMechanismGateOpen();
         }
     }
 
@@ -289,6 +310,12 @@ export class GameStart extends Component {
             this.counter2UnlockTarget = this.counter2DeliveryNode.getChildByName('SYJ')
                 ?? this._findDescendantByName(this.counter2DeliveryNode, 'SYJ');
         }
+        if (!this.gateDoor1?.isValid) {
+            this.gateDoor1 = this._findDescendantByName(island, 'Men');
+        }
+        if (!this.gateDoor2?.isValid) {
+            this.gateDoor2 = this._findDescendantByName(island, 'Men-001');
+        }
     }
 
     private _findDescendantByName(root: Node, name: string): Node | null {
@@ -333,6 +360,65 @@ export class GameStart extends Component {
         this._juiceMachine?.activate();
         this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindJuiceMachine(this._juiceMachine);
         this._protagonist?.getComponent(PlayerJuiceTrayCarrier)?.bindFromSceneRefs();
+        this._scheduleMechanismGateOpen(1);
+    }
+
+    private _scheduleMechanismGateOpen(delaySec: number): void {
+        if (this._gateOpened) {
+            return;
+        }
+        this.scheduleOnce(() => this._openMechanismGate(), delaySec);
+    }
+
+    private _openMechanismGate(): void {
+        if (this._gateOpened) {
+            return;
+        }
+        this._resolveLateGameSceneNodes();
+        if (!this.gateDoor1?.isValid && !this.gateDoor2?.isValid) {
+            console.warn('[GameStart] 请在 Inspector 绑定 gateDoor1 / gateDoor2（Men / Men-001）');
+            return;
+        }
+        this._gateOpened = true;
+        this._unregisterGateFenceAabbs();
+        MechanismGate.open(
+            this.gateDoor1,
+            this.gateDoor2,
+            this.gateDoor1WorldDeltaY,
+            this.gateDoor2WorldDeltaY,
+            true,
+        );
+    }
+
+    private _snapMechanismGateOpen(): void {
+        if (this._gateOpened) {
+            return;
+        }
+        this._resolveLateGameSceneNodes();
+        if (!this.gateDoor1?.isValid && !this.gateDoor2?.isValid) {
+            return;
+        }
+        this._gateOpened = true;
+        this._unregisterGateFenceAabbs();
+        MechanismGate.open(
+            this.gateDoor1,
+            this.gateDoor2,
+            this.gateDoor1WorldDeltaY,
+            this.gateDoor2WorldDeltaY,
+            false,
+        );
+    }
+
+    private _registerGateFenceAabbs(): void {
+        const boundary = this.island?.getComponent(PlayAreaBoundary);
+        if (!boundary) {
+            return;
+        }
+        boundary.setManualFenceNodes([this.gateDoor1, this.gateDoor2]);
+    }
+
+    private _unregisterGateFenceAabbs(): void {
+        this.island?.getComponent(PlayAreaBoundary)?.clearManualFenceAabbs();
     }
 
     private _onWorkerUnlocked(): void {
