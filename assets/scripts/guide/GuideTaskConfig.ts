@@ -66,7 +66,7 @@ export const DEFAULT_GUIDE_TASKS: GuideTaskConfig[] = [
         target: {
             kind: GuideTargetKind.Dynamic,
             dynamicKey: GuideDynamicTarget.PendingCustomerDelivery,
-            worldOffset: new Vec3(0, 2.2, 0),
+            worldOffset: new Vec3(0, 4.2, 0),
         },
     },
     {

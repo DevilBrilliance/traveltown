@@ -3,6 +3,7 @@ import { CurrencyCost, currencyCost, CurrencyType } from '../currency/CurrencyTy
 import {
     COUNTER_DELIVERY_RADIUS,
     isActorNearCounterDelivery,
+    resolveCounterServiceNode,
 } from '../juice/CounterDeliveryHelper';
 import { OrderManager } from './OrderManager';
 import { OrderSubjectType } from './OrderSubjectType';
@@ -84,11 +85,16 @@ export function findDeliverableCustomerJuiceOrder(
     return null;
 }
 
-/** 首个待交付顾客订单对应的 ZuoZi（引导箭头用） */
+/** 首个待交付顾客订单对应的 ZuoZi（寻路/范围判定） */
 export function resolvePendingOrderDeliveryNode(): Node | null {
     const order = findPendingCustomerJuiceOrder();
     if (!order) {
         return null;
     }
     return resolveCustomerDeliveryNode(order.subjectId);
+}
+
+/** 首个待交付顾客订单对应的 SYT（引导箭头） */
+export function resolvePendingOrderServiceNode(): Node | null {
+    return resolveCounterServiceNode(resolvePendingOrderDeliveryNode());
 }

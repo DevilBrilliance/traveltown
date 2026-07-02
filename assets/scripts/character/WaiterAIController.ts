@@ -105,12 +105,12 @@ export class WaiterAIController extends Component {
     }
 
     private _updateIdleAtSpawn(dt: number): void {
-        if (this._shouldDeliver()) {
-            this._beginGoToCounter();
-            return;
-        }
         if (this._shouldPickup()) {
             this._setState(WaiterAIState.GoToRack);
+            return;
+        }
+        if (this._shouldDeliver()) {
+            this._beginGoToCounter();
             return;
         }
 
@@ -222,10 +222,10 @@ export class WaiterAIController extends Component {
         }
     }
 
-    /** 托盘有果汁且有待交付订单时优先去收银台（不必等托盘满） */
+    /** 架上还有果汁且托盘未满时继续取杯 */
     private _shouldPickup(): boolean {
         const tray = this._tray!;
-        if (tray.carriedJuiceCount > 0) {
+        if (tray.carriedJuiceCount >= tray.maxCarryCount) {
             return false;
         }
         if (!hasPendingCustomerJuiceOrder()) {
@@ -234,9 +234,16 @@ export class WaiterAIController extends Component {
         return this._getSceneJuiceCount() > 0;
     }
 
+    /** 托盘满或架上无果汁可再取时再去交付（托盘有货即可交，不必满） */
     private _shouldDeliver(): boolean {
         const tray = this._tray!;
-        return tray.carriedJuiceCount > 0 && hasPendingCustomerJuiceOrder();
+        if (tray.carriedJuiceCount <= 0 || !hasPendingCustomerJuiceOrder()) {
+            return false;
+        }
+        if (tray.carriedJuiceCount < tray.maxCarryCount && this._getSceneJuiceCount() > 0) {
+            return false;
+        }
+        return true;
     }
 
     private _beginGoToCounter(): void {

@@ -6,7 +6,7 @@ import {
     Vec3,
 } from 'cc';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
-import { resolvePendingOrderDeliveryNode } from '../order/CustomerOrderHelper';
+import { resolvePendingOrderServiceNode } from '../order/CustomerOrderHelper';
 import { GuideArrow } from './GuideArrow';
 import { DEFAULT_GUIDE_TASKS } from './GuideTaskConfig';
 import {
@@ -246,7 +246,7 @@ export class GuideManager extends Component {
             case GuideDynamicTarget.FirstPineapple:
                 return GameSceneRefs.pineappleField;
             case GuideDynamicTarget.PendingCustomerDelivery:
-                return resolvePendingOrderDeliveryNode();
+                return resolvePendingOrderServiceNode();
             default:
                 return null;
         }
