@@ -2,20 +2,15 @@ import {
     _decorator,
     Component,
 } from 'cc';
-import { AudioController } from '../audio/AudioController';
-import { SoundEffect } from '../audio/SoundEffect';
 import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { CharacterAnimController } from './CharacterAnimController';
 import { CharacterAnimState } from './CharacterAnimState';
 
-const { ccclass, property } = _decorator;
+const { ccclass } = _decorator;
 
-/** 服务员移动表现：端托盘跑步/待机 + 走路循环音效 */
+/** 服务员移动表现：端托盘跑步/待机 */
 @ccclass('WaiterMovementController')
 export class WaiterMovementController extends Component {
-    @property({ tooltip: '跑步音效相对音量' })
-    runSoundVolume = 1;
-
     private _anim: CharacterAnimController | null = null;
     private _tray: PlayerJuiceTrayCarrier | null = null;
     private _isMoving = false;
@@ -28,9 +23,6 @@ export class WaiterMovementController extends Component {
 
     onDestroy() {
         this.node?.off('juice-tray-changed', this._refreshAnim, this);
-        if (this._isMoving) {
-            AudioController.instance?.stopLoop();
-        }
     }
 
     public setMoving(moving: boolean): void {
@@ -38,13 +30,7 @@ export class WaiterMovementController extends Component {
             return;
         }
         this._isMoving = moving;
-        if (moving) {
-            this._playLocomotion(true);
-            AudioController.ensure().playLoop(SoundEffect.Run, this.runSoundVolume);
-        } else {
-            this._playLocomotion(false);
-            AudioController.instance?.stopLoop();
-        }
+        this._playLocomotion(moving);
     }
 
     public refreshAnim(): void {

@@ -2,20 +2,15 @@ import {
     _decorator,
     Component,
 } from 'cc';
-import { AudioController } from '../audio/AudioController';
-import { SoundEffect } from '../audio/SoundEffect';
 import { CharacterAnimController } from './CharacterAnimController';
 import { CharacterAnimState } from './CharacterAnimState';
 import { WorkerFruitCarrier } from './WorkerFruitCarrier';
 
-const { ccclass, property } = _decorator;
+const { ccclass } = _decorator;
 
-/** 工人移动表现：跑步动画 + 走路循环音效（收割时不播） */
+/** 工人移动表现：跑步动画（收割时不播） */
 @ccclass('WorkerMovementController')
 export class WorkerMovementController extends Component {
-    @property({ tooltip: '跑步音效相对音量' })
-    runSoundVolume = 1;
-
     private _anim: CharacterAnimController | null = null;
     private _carrier: WorkerFruitCarrier | null = null;
     private _isMoving = false;
@@ -28,9 +23,6 @@ export class WorkerMovementController extends Component {
 
     onDestroy() {
         this.node?.off('fruit-collect-anim-finished', this._onHarvestFinished, this);
-        if (this._isMoving) {
-            AudioController.instance?.stopLoop();
-        }
     }
 
     public setMoving(moving: boolean): void {
@@ -38,15 +30,7 @@ export class WorkerMovementController extends Component {
             return;
         }
         this._isMoving = moving;
-        if (moving) {
-            this._playLocomotion(true);
-            if (!this._carrier?.isHarvesting) {
-                AudioController.ensure().playLoop(SoundEffect.Run, this.runSoundVolume);
-            }
-        } else {
-            this._playLocomotion(false);
-            AudioController.instance?.stopLoop();
-        }
+        this._playLocomotion(moving);
     }
 
     public refreshAnim(): void {
