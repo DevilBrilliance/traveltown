@@ -15,6 +15,7 @@ import {
 import { AudioController } from '../audio/AudioController';
 import { SoundEffect } from '../audio/SoundEffect';
 import { MoneyPickup } from './MoneyPickup';
+import { GameSceneRefs } from '../scene/GameSceneRefs';
 
 const { ccclass, property } = _decorator;
 
@@ -117,6 +118,11 @@ export class MoneyPickupSpawner extends Component {
         });
     }
 
+    /** 获取首个生成的金币节点（引导箭头用） */
+    public getFirstCoin(): Node | null {
+        return this._coins[0]?.isValid ? this._coins[0] : null;
+    }
+
     private static _loadMoneyPrefab(onLoaded: (prefab: Prefab) => void): void {
         assetManager.loadAny({ uuid: MONEY_PREFAB_UUID, type: Prefab }, (err, asset) => {
             if (err || !asset) {
@@ -135,6 +141,7 @@ export class MoneyPickupSpawner extends Component {
         }
         this._spawnWithPrefab(prefab);
         this._didSpawn = true;
+        GameSceneRefs.firstMoneyPickup = this.getFirstCoin();
     }
 
     private _collectSurfaceRenderers(): void {

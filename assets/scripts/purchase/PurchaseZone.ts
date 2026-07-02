@@ -23,6 +23,8 @@ import { WorkerGrant } from '../reward/WorkerGrant';
 import { RewardManager } from '../reward/RewardManager';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
+import { GuideManager } from '../guide/GuideManager';
+import { GuideConditionType } from '../guide/GuideTypes';
 import { PurchaseZoneView } from './PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from './PurchaseZonePaths';
 
@@ -266,6 +268,9 @@ export class PurchaseZone extends Component {
         }
 
         this.node.emit('purchase-zone-unlocked', this.unlockTarget);
+        GuideManager.instance?.notify(GuideConditionType.UnlockPurchaseZone, {
+            subjectId: this._getSubjectId(),
+        });
     }
 
     private _refreshUI(): void {

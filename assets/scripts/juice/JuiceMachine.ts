@@ -17,6 +17,8 @@ import { SoundEffect } from '../audio/SoundEffect';
 import { PlayerFruitCarrier } from '../fruit/PlayerFruitCarrier';
 import { IslandSurfaceSampler } from '../scene/IslandSurfaceSampler';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
+import { GuideManager } from '../guide/GuideManager';
+import { GuideConditionType } from '../guide/GuideTypes';
 import { PurchaseZoneView } from '../purchase/PurchaseZoneView';
 import { PURCHASE_ZONE_UI_PREFAB_PATH } from '../purchase/PurchaseZonePaths';
 import { JuiceMachineAnimator } from './JuiceMachineAnimator';
@@ -274,7 +276,10 @@ export class JuiceMachine extends Component {
             return;
         }
 
-        this.depositFromCarrier(carrier, dt);
+        const deposited = this.depositFromCarrier(carrier, dt);
+        if (deposited > 0) {
+            GuideManager.instance?.notify(GuideConditionType.DepositPineapple, { amount: deposited });
+        }
     }
 
     private _updateProduction(dt: number): void {

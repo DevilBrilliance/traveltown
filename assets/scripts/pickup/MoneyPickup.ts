@@ -9,6 +9,8 @@ import { SoundEffect } from '../audio/SoundEffect';
 import { CurrencyType } from '../currency/CurrencyType';
 import { CurrencyWallet } from '../currency/CurrencyWallet';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
+import { GuideManager } from '../guide/GuideManager';
+import { GuideConditionType } from '../guide/GuideTypes';
 
 const { ccclass, property } = _decorator;
 
@@ -52,6 +54,7 @@ export class MoneyPickup extends Component {
         this._collected = true;
         CurrencyWallet.ensure().add(CurrencyType.GoldCoin, this.amount);
         AudioController.ensure().play(SoundEffect.CollectCoin);
+        GuideManager.instance?.notify(GuideConditionType.CollectMoney, { amount: 1 });
         this.node.destroy();
     }
 

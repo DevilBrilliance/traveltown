@@ -22,6 +22,16 @@ class GameSceneRefsImpl {
     public juiceMachine: JuiceMachine | null = null;
 
     public protagonist: Node | null = null;
+
+    /** 首个可拾取金币（由 MoneyPickupSpawner 写入） */
+    public firstMoneyPickup: Node | null = null;
+
+    public workerPurchaseZone: Node | null = null;
+
+    public cashierPurchaseZone: Node | null = null;
+
+    /** 菠萝田根节点 */
+    public pineappleField: Node | null = null;
 }
 
 export const GameSceneRefs = new GameSceneRefsImpl();

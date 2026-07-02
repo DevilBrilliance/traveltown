@@ -18,6 +18,8 @@ import { CurrencyType } from '../currency/CurrencyType';
 import { OrderManager } from '../order/OrderManager';
 import { findPendingCustomerJuiceOrder } from '../order/CustomerOrderHelper';
 import { GameSceneRefs } from '../scene/GameSceneRefs';
+import { GuideManager } from '../guide/GuideManager';
+import { GuideConditionType } from '../guide/GuideTypes';
 import { JuiceMachine } from './JuiceMachine';
 import { JUICE_TRAY_DB_PATH, JUICE_TRAY_PREFAB_UUID } from './JuiceMachinePaths';
 import { JuiceRackBounds } from './JuiceRackBounds';
@@ -457,6 +459,7 @@ export class PlayerJuiceTrayCarrier extends Component {
 
             this._deliverTimer -= this.deliverInterval;
             this.node.emit('juice-tray-changed', this._carriedCount);
+            GuideManager.instance?.notify(GuideConditionType.DeliverJuice, { amount: 1 });
         }
     }
 
@@ -589,6 +592,7 @@ export class PlayerJuiceTrayCarrier extends Component {
 
         this._carriedCount++;
         this.node.emit('juice-tray-changed', this._carriedCount);
+        GuideManager.instance?.notify(GuideConditionType.CollectJuice, { amount: 1 });
     }
 
     private _takeOneGlassFromRack(rack: Node): Node | null {

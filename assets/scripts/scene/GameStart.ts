@@ -43,6 +43,9 @@ import { PlayerJuiceTrayCarrier } from '../juice/PlayerJuiceTrayCarrier';
 import { JuiceMachine } from '../juice/JuiceMachine';
 import { JuiceMachineSetup } from '../juice/JuiceMachineSetup';
 import { GameSceneRefs } from './GameSceneRefs';
+import { GuideManager } from '../guide/GuideManager';
+import { GuideConditionType } from '../guide/GuideTypes';
+import { FruitType } from '../fruit/FruitType';
 
 const { ccclass, property } = _decorator;
 
@@ -112,6 +115,7 @@ export class GameStart extends Component {
         this._ensureFenceBoundary();
         this._ensureDrawCallOptimizer();
         this._ensureFruitCollectFields();
+        GuideManager.ensure();
         this.scheduleOnce(() => this._bindUnlockChain(), 0);
         if (this.autoStart) {
             this.startGame();
@@ -148,6 +152,7 @@ export class GameStart extends Component {
                 bindCameraTouchUI(orbit);
                 this._protagonist = characterNode;
                 GameSceneRefs.protagonist = characterNode;
+                this._bindProtagonistGuide(characterNode);
                 this._onProtagonistReady();
             },
             this.protagonistPrefab,
@@ -217,6 +222,16 @@ export class GameStart extends Component {
         if (this._workerPurchaseZone.isPurchased) {
             this._onWorkerUnlocked();
         }
+
+        this._publishGuideSceneRefs();
+    }
+
+    private _publishGuideSceneRefs(): void {
+        GameSceneRefs.workerPurchaseZone = this._workerPurchaseZone?.node ?? null;
+        GameSceneRefs.cashierPurchaseZone = this._cashierPurchaseZone?.node ?? null;
+        if (this.island?.isValid) {
+            GameSceneRefs.pineappleField = this.island.getChildByName('pineapple');
+        }
     }
 
     private _onCashRegisterUnlocked(): void {
@@ -262,6 +277,19 @@ export class GameStart extends Component {
     private _onProtagonistReady(): void {
         AudioController.ensure().playBgm(SoundEffect.BgmHappyWaves);
         this._spawnMoneyPickups();
+        this.scheduleOnce(() => {
+            const spawner = this.node.getComponent(MoneyPickupSpawner);
+            GameSceneRefs.firstMoneyPickup = spawner?.getFirstCoin() ?? GameSceneRefs.firstMoneyPickup;
+            GuideManager.ensure().begin();
+        }, 0.35);
+    }
+
+    private _bindProtagonistGuide(protagonist: Node): void {
+        protagonist.on('fruit-collected', (fruitType: FruitType) => {
+            if (fruitType === FruitType.Pineapple) {
+                GuideManager.instance?.notify(GuideConditionType.CollectPineapple, { amount: 1 });
+            }
+        });
     }
 
     private _spawnMoneyPickups(): void {
@@ -295,6 +323,7 @@ export class GameStart extends Component {
         GameSceneRefs.counterPurchaseZone = this.counterPurchaseZone;
         GameSceneRefs.juiceMachine = this._juiceMachine;
         GameSceneRefs.protagonist = this._protagonist;
+        this._publishGuideSceneRefs();
 
         if (!this.counterDeliveryNode) {
             console.warn('[GameStart] 请在 Inspector 绑定 counterDeliveryNode (ZuoZi)');
